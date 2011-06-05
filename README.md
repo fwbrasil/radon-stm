@@ -87,3 +87,8 @@ It is possible to destroy a Ref and, after that, it can't be read or written:
 	}
 
 Take a look in  [Sleeping Barber Spec](http://code.google.com/p/radon-stm/source/browse/trunk/radon-stm/src/test/scala/net/fwbrasil/radon/problems/SleepingBarber.scala "Sleeping Barber Spec").
+
+License
+=======
+
+All code in this repository is licensed under the GPL version 3, or any later version at your choice. See the LICENSE-GPL file for more details.
