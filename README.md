@@ -19,61 +19,55 @@ Put the radon jar in the classpath and create a Radon context:
 
 Import the context object for the classes where you want to use Radon:
 
-`
-import TestRadonContext._
-`
+
+	import TestRadonContext._
+
 
 Concurrency control is achieved by using Ref objects in transactional blocks like:
 
-`
-transactional {
-    val ref = new Ref(100)
-    ref.set(200)
-    ref :== 300
-    println(ref.get)
-    println(!ref)
-}
-`
+	transactional {
+	    val ref = new Ref(100)
+	    ref.set(200)
+	    ref :== 300
+	    println(ref.get)
+	    println(!ref)
+	}
 
 To set a ref value use set or :==, and to get a ref value use get or the unary ! method.
 
-* Important: Make sure to use immutable values inside Ref. *
+********************************************************
+Important: Make sure to use immutable values inside Ref.
+********************************************************
 
 You can use ref objects on many threads without caring about concurrency. RadonSTM detects conflicts and retries the transaction if it is needed. Transaction is hold on a thread local while it is active, so you can have code under a transaction without declaring the "transactional" keyword.
 
 Typically transactional blocks are controlled by the framework. However, it's possible to control a transaction as follows:
 
-`
-val transaction = new Transaction
-transactional(transaction) {
-    val ref = new Ref(100)
-}
-transaction.commit
-`
+	val transaction = new Transaction
+	transactional(transaction) {
+	    val ref = new Ref(100)
+	}
+	transaction.commit
 
 You can define a transaction propagation:
 
-`
-transactional {
-    val ref = new Ref(100)
-    transactional(mandatory) {
-        ref := 200
-    }
-    println(!ref)
-}
-`
+	transactional {
+	    val ref = new Ref(100)
+	    transactional(mandatory) {
+	        ref := 200
+	    }
+	    println(!ref)
+	}
 
 Nested transactions are a type of propagation:
 
-`
-transactional {
-    val ref = new Ref(100)
-    transactional(nested) {
-        ref := 200
-    }
-    println(!ref)
-}
-`
+	transactional {
+	    val ref = new Ref(100)
+	    transactional(nested) {
+	        ref := 200
+	    }
+	    println(!ref)
+	}
 
 The available propagations are based on EJB propagations:
 	*	required
@@ -86,12 +80,10 @@ The available propagations are based on EJB propagations:
 
 It is possible to destroy a Ref and, after that, it can't be read or written:
 
-`
-transactional {
-    val ref = new Ref(100)
-    ref.destroy
-}
-`
+
+	transactional {
+	    val ref = new Ref(100)
+	    ref.destroy
+	}
 
 Take a look in  [Sleeping Barber Spec](http://code.google.com/p/radon-stm/source/browse/trunk/radon-stm/src/test/scala/net/fwbrasil/radon/problems/SleepingBarber.scala "Sleeping Barber Spec").
-
