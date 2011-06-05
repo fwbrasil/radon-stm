@@ -13,9 +13,9 @@ Getting Started
 
 Put the radon jar in the classpath and create a Radon context:
 
-`
-object TestRadonContext extends RadonContext
-`
+
+	object TestRadonContext extends RadonContext
+
 
 Import the context object for the classes where you want to use Radon:
 
