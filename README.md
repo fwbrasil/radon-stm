@@ -1,10 +1,10 @@
 Introduction
 ============
 
-RadonSTM is a timestamp based Software Transaction Memory ([http://en.wikipedia.org/wiki/Software_transactional_memory STM]) implementation in Scala.
+RadonSTM is a timestamp based Software Transaction Memory ([STM](http://en.wikipedia.org/wiki/Software_transactional_memory "STM")) implementation in Scala.
 The main framework objective is providing a simple and flexible way to deal with concurrency. STM is a wide known solution implemented in many languages.
 
-This project was initially  based on [http://www.codecommit.com/blog/scala/improving-the-stm-multi-version-concurrency-control Daniel Spiewalk STM] implementation and grew up focused on providing the basis for Activate Persistence Framework.
+This project was initially  based on [Daniel Spiewalk STM](http://www.codecommit.com/blog/scala/improving-the-stm-multi-version-concurrency-control "Daniel Spiewalk STM") implementation and grew up focused on providing the basis for Activate Persistence Framework.
 
 Radon has features like propagation control, nested transactions and ref destroying.
 
@@ -36,7 +36,7 @@ Concurrency control is achieved by using Ref objects in transactional blocks l
 To set a ref value use set or :==, and to get a ref value use get or the unary ! method.
 
 ********************************************************
-Important: Make sure to use immutable values inside Ref.
+*Important: Make sure to use immutable values inside Ref.*
 ********************************************************
 
 You can use ref objects on many threads without caring about concurrency. RadonSTM detects conflicts and retries the transaction if it is needed. Transaction is hold on a thread local while it is active, so you can have code under a transaction without declaring the "transactional" keyword.
