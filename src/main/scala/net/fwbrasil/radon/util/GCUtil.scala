@@ -10,7 +10,7 @@ object GCUtil {
     private[this] def runGCInternal = {
         var usedMem1 = usedMemory
         var usedMem2 = Long.MaxValue;
-        for (i <- 0 until 1000; if(usedMem1 < usedMem2))
+        for (i <- 0 until 10000; if(usedMem1 < usedMem2))
         {
             runtime.runFinalization ();
             runtime.gc;

@@ -12,6 +12,9 @@ class RadonStmProject(info: ProjectInfo) extends DefaultProject(info) {
 
 	val snapshots = "snapshots" at "http://scala-tools.org/repo-snapshots"
 	val releases = "releases" at "http://scala-tools.org/repo-releases"
-	val apache = "Maven" at "http://repo1.maven.org/maven2/"
+	val maven = "Maven" at "http://repo1.maven.org/maven2/"
+	
+	override def managedStyle = ManagedStyle.Maven
+    lazy val publishTo = Resolver.ssh("fwbrasil.net", "fwbrasil.net", 8080) as("maven") withPermissions("0644")
 	
 }
