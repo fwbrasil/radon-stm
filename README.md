@@ -70,13 +70,13 @@ Nested transactions are a type of propagation:
 	}
 
 The available propagations are based on EJB propagations:
-	*	required
-	*	requiresNew
-	*	mandatory
-	*	notSupported
-	*	supports
-	*	never
-	*	nested
+ * required
+ * requiresNew
+ * mandatory
+ * notSupported
+ * supports
+ * never
+ * nested
 
 It is possible to destroy a Ref and, after that, it can't be read or written:
 
