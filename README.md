@@ -8,6 +8,27 @@ This project was initially  based on [Daniel Spiewalk STM](http://www.codecommi
 
 Radon has features like propagation control, nested transactions and ref destroying.
 
+Dependency
+==========
+
+SBT
+
+	val radonStm = "net.fwbrasil" %% "radon-stm" % "0.0.1"
+	val fwbrasil = "fwbrasil.net" at "http://fwbrasil.net/maven/"
+
+Maven
+
+	<dependency>
+    	<groupId>net.fwbrasil</groupId>
+	    <artifactId>radon-stm</artifactId>
+    	<version>0.0.1</version>
+	</dependency>
+	
+	<repository>
+		<id>fwbrasil</id>
+		<url>http://fwbrasil.net/maven/</url>
+    </repository>
+
 Getting Started
 ===============
 
