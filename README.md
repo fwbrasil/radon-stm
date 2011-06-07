@@ -112,4 +112,4 @@ Take a look in  [Sleeping Barber Spec](http://code.google.com/p/radon-stm/sourc
 License
 =======
 
-All code in this repository is licensed under the GPL version 3, or any later version at your choice. See the LICENSE-GPL file for more details.
+All code in this repository is licensed under the LGPL. See the LICENSE-LGPL file for more details.
