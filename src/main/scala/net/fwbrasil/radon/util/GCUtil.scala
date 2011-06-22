@@ -5,7 +5,7 @@ object GCUtil {
     val runtime = Runtime.getRuntime
     
 	def runGC =
-        for (i <- 0 until 4) runGCInternal
+        for (i <- 0 until 20) runGCInternal
          
     private[this] def runGCInternal = {
         var usedMem1 = usedMemory

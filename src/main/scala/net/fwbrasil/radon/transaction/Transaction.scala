@@ -36,7 +36,7 @@ trait RefSnapshooter {
 	}
 
 	private[transaction] def hasDestroyedFlag[T](ref: Ref[T]) =
-		refsSnapshot.contains(ref) && refsSnapshot(ref).destroyedFlag
+		(refsSnapshot.contains(ref) && refsSnapshot(ref).destroyedFlag) || ref.refContent.destroyedFlag
 
 	private[transaction] def snapshot[T](ref: Ref[T]) =
 		if (!refsSnapshot.contains(ref))
@@ -156,62 +156,54 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 
 	private[radon] def isDestroyed[T](ref: Ref[T]): Boolean = {
 		startIfNotStarted
-		snapshot(ref)
 		hasDestroyedFlag(ref)
 	}
 
 	def commit(): Unit = {
-		if (!isTransactionDoNothing) try {
+		if (!isTransactionDoNothing) {
 
 			val refsReadWithoutWrite = refsRead -- refsWrite
-			val readUnlockeds = lockall(refsReadWithoutWrite, _.tryReadLock)
+			val writeUnlockeds = lockall(refsWrite, _.tryWriteLock)
+
 			try {
-				retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds.toSeq: _*)
-				val writeUnlockeds = lockall(refsWrite, _.tryWriteLock)
+				retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
 
-				try {
-					retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
+				stop
 
-					stop
+				refsRead.foreach(validateContext(_))
+				refsWrite.foreach(validateContext(_))
 
-					refsRead.foreach(validateContext(_))
-					refsWrite.foreach(validateContext(_))
+				refsRead.foreach(validateConcurrentRefCreation(_))
+				refsWrite.foreach(validateConcurrentRefCreation(_))
 
-					refsRead.foreach(validateConcurrentRefCreation(_))
-					refsWrite.foreach(validateConcurrentRefCreation(_))
+				refsRead.foreach(validateRead(_))
+				refsWrite.foreach(validateWrite(_))
 
-					refsRead.foreach(validateRead(_))
-					refsWrite.foreach(validateWrite(_))
-
-					try
-						if (!transient && isWrite)
-							context.makeDurable(this)
-					catch {
-						case e => 
-							prepareRollback
-							throw e
-					} finally {
-
-						for (ref <- refsReadWithoutWrite)
-							setRefContent(ref, false, true)
-	
-						for (ref <- refsWrite)
-							setRefContent(ref, true, refsRead.contains(ref))
-	
-						Statistics.commitCount.increment
-					}
+				try
+					if (!transient && isWrite)
+						context.makeDurable(this)
+				catch {
+					case e =>
+						prepareRollback
+						throw e
 				} finally {
-					val writeLockeds = (refsWrite -- writeUnlockeds)
-					writeLockeds.foreach(_.writeUnlock)
-					writeLockeds.foreach((ref) => ref.synchronized(ref.notify))
+
+					for (ref <- refsReadWithoutWrite)
+						ref.synchronized(setRefContent(ref, false, true))
+
+					for (ref <- refsWrite)
+						setRefContent(ref, true, refsRead.contains(ref))
+
+					Statistics.commitCount.increment
 				}
 			} finally {
-				val readLockeds = (refsReadWithoutWrite -- readUnlockeds)
-				readLockeds.foreach(_.readUnlock)
-				readLockeds.foreach((ref) => ref.synchronized(ref.notify))
+				val writeLockeds = (refsWrite -- writeUnlockeds)
+				writeLockeds.foreach(_.writeUnlock)
+				writeLockeds.foreach((ref) => ref.synchronized(ref.notify))
+				clear
 			}
-		} finally
-		clear
+		}
+
 	}
 
 	private[this] def setRefContent(ref: Ref[_], isRefWrite: Boolean, isRefRead: Boolean) = {
@@ -223,7 +215,7 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 			} else
 				(refContent.value, refContent.destroyedFlag)
 		val readTimestamp =
-			if (!transient && isRefRead && !isReadOnly)
+			if (!transient && isRefRead && !isReadOnly && refContent.readTimestamp < startTimestamp)
 				startTimestamp
 			else
 				refContent.readTimestamp
@@ -234,7 +226,7 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 				refContent.writeTimestamp
 		ref.setRefContent(value, readTimestamp, writeTimestamp, destroyedFlag)
 	}
-	
+
 	def prepareRollback = {
 		val refsCreated =
 			refsWrite.filter(_.creationTransaction == this)
@@ -247,7 +239,7 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 		prepareRollback
 		commit
 	}
-	
+
 	private[this] def clearValues = {
 		refsRead = HashSet[Ref[Any]]()
 		refsWrite = HashSet[Ref[Any]]()
