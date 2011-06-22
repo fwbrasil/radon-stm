@@ -2,11 +2,11 @@ package net.fwbrasil.radon.dsl.actor
 
 import net.fwbrasil.radon.transaction.TransactionContext
 
-case class TransactorMessage[A] extends ActorMessage[A]
-case class CommitMessage extends TransactorMessage[Unit]
-case class RollbackMessage extends TransactorMessage[Unit]
-case class MarkTransactionNotReadOnlyMessage extends TransactorMessage[Unit]
-case class StartTransactionIfNotStartedMessage extends TransactorMessage[Unit]
+abstract class TransactorMessage[A]() extends ActorMessage[A]
+case class CommitMessage() extends TransactorMessage[Unit]
+case class RollbackMessage() extends TransactorMessage[Unit]
+case class MarkTransactionNotReadOnlyMessage() extends TransactorMessage[Unit]
+case class StartTransactionIfNotStartedMessage() extends TransactorMessage[Unit]
 
 class ExecutorTransactor(override val oneActorPerThread: Boolean)(implicit context: TransactionContext) extends ExecutorActor(oneActorPerThread) {
 	

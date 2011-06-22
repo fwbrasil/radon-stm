@@ -4,9 +4,9 @@ import scala.actors.Actor
 import scala.actors.Actor._
 import scala.actors.Futures._
 
-case class ActorMessage[A]
+abstract class ActorMessage[A]
 case class ExecuteMessage[A](f: () => A) extends ActorMessage[A]
-case class StopMessage extends ActorMessage[Unit]
+case class StopMessage() extends ActorMessage[Unit]
 case class ExceptionMessage[A](ex: Exception) extends ActorMessage[A]
 case class OkMessage[A](ret: A) extends ActorMessage[A]
 
