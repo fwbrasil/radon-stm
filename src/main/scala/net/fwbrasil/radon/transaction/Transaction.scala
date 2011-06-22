@@ -160,53 +160,61 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 	}
 
 	def commit(): Unit = {
-		if (!isTransactionDoNothing) {
+		if (!isTransactionDoNothing) try {
 
 			val refsReadWithoutWrite = refsRead -- refsWrite
-			val writeUnlockeds = lockall(refsWrite, _.tryWriteLock)
-
+			val readUnlockeds = lockall(refsReadWithoutWrite, _.tryReadLock)
 			try {
-				retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
+				retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds.toSeq: _*)
+				val writeUnlockeds = lockall(refsWrite, _.tryWriteLock)
 
-				stop
+				try {
+					retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
 
-				refsRead.foreach(validateContext(_))
-				refsWrite.foreach(validateContext(_))
+					stop
 
-				refsRead.foreach(validateConcurrentRefCreation(_))
-				refsWrite.foreach(validateConcurrentRefCreation(_))
+					refsRead.foreach(validateContext(_))
+					refsWrite.foreach(validateContext(_))
 
-				refsRead.foreach(validateRead(_))
-				refsWrite.foreach(validateWrite(_))
+					refsRead.foreach(validateConcurrentRefCreation(_))
+					refsWrite.foreach(validateConcurrentRefCreation(_))
 
-				try
-					if (!transient && isWrite)
-						context.makeDurable(this)
-				catch {
-					case e =>
-						prepareRollback
-						throw e
+					refsRead.foreach(validateRead(_))
+					refsWrite.foreach(validateWrite(_))
+
+					try
+						if (!transient && isWrite)
+							context.makeDurable(this)
+					catch {
+						case e => 
+							prepareRollback
+							throw e
+					} finally {
+
+						for (ref <- refsReadWithoutWrite)
+							setRefContent(ref, false, true)
+	
+						for (ref <- refsWrite)
+							setRefContent(ref, true, refsRead.contains(ref))
+	
+						Statistics.commitCount.increment
+					}
 				} finally {
-
-					for (ref <- refsReadWithoutWrite)
-						ref.synchronized(setRefContent(ref, false, true))
-
-					for (ref <- refsWrite)
-						setRefContent(ref, true, refsRead.contains(ref))
-
-					Statistics.commitCount.increment
+					val writeLockeds = (refsWrite -- writeUnlockeds)
+					writeLockeds.foreach(_.writeUnlock)
+					writeLockeds.foreach((ref) => ref.synchronized(ref.notify))
 				}
 			} finally {
-				val writeLockeds = (refsWrite -- writeUnlockeds)
-				writeLockeds.foreach(_.writeUnlock)
-				writeLockeds.foreach((ref) => ref.synchronized(ref.notify))
-				clear
+				val readLockeds = (refsReadWithoutWrite -- readUnlockeds)
+				readLockeds.foreach(_.readUnlock)
+				readLockeds.foreach((ref) => ref.synchronized(ref.notify))
 			}
-		}
-
+		} finally
+			clear
 	}
 
-	private[this] def setRefContent(ref: Ref[_], isRefWrite: Boolean, isRefRead: Boolean) = {
+
+	private[this] def setRefContent(ref: Ref[_], isRefWrite: Boolean, isRefRead: Boolean) = ref.synchronized {
 		val refContent = ref.refContent
 		val (value, destroyedFlag) =
 			if (!transient && isRefWrite && refContent.writeTimestamp < startTimestamp) {
