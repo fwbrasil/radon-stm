@@ -1,2 +1,5 @@
 /target
 /lib_managed
+/bin
+.DS_Store
+.scala_dependencies
