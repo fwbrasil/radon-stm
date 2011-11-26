@@ -15,13 +15,12 @@ class ExclusiveThreadLocal[T <: ExclusiveThreadLocalItem] {
   val underlying = new ThreadLocal[Option[T]]
 
   def get: Option[T] = {
-	  val get = underlying.get
-	  if(get==null)
+	  val underlyingGet = underlying.get
+	  if(underlyingGet==null)
 	 	  None
  	  else 
- 	 	  get
+ 	 	  underlyingGet
   }
-    Option(underlying.get).getOrElse(None)
 
   def set(value: Option[T]) = {
     val currentThread = Thread.currentThread
