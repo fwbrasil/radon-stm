@@ -3,3 +3,8 @@
 /bin
 .DS_Store
 .scala_dependencies
+target
+.project
+.classpath
+.cache
+.settings
