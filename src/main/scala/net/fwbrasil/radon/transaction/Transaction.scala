@@ -158,6 +158,11 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 		startIfNotStarted
 		hasDestroyedFlag(ref)
 	}
+	
+	private[radon] def isDirty[T](ref: Ref[T]): Boolean = {
+		startIfNotStarted
+		refsWrite.contains(ref)
+	}
 
 	def commit(): Unit = {
 		if (!isTransactionDoNothing) try {
@@ -282,7 +287,7 @@ trait TransactionContext extends PropagationContext {
 		transactional(Option(pTransaction))(f)
 
 	def transactional[A](pTransaction: Option[net.fwbrasil.radon.transaction.Transaction])(f: => A): A =
-		transactional(pTransaction, mandatory)(f)
+		transactional(pTransaction, required)(f)
 
 	def transactional[A](pTransaction: net.fwbrasil.radon.transaction.Transaction, propagation: Propagation)(f: => A): A =
 		transactional(Option(pTransaction), propagation)(f)
@@ -291,7 +296,12 @@ trait TransactionContext extends PropagationContext {
 		val activeTransaction = transactionManager.getActiveTransaction
 		if (activeTransaction != None && activeTransaction != transaction)
 			throw new IllegalStateException("There is another transaction active!")
-		propagation.execute(transaction)(f)(this)
+		if(transaction.isDefined)
+			transaction.synchronized {
+				propagation.execute(transaction)(f)(this)
+			}
+		else
+			propagation.execute(transaction)(f)(this)
 	}
 
 	def transactionalWhile[A](cond: => Boolean)(f: => A): Unit = {

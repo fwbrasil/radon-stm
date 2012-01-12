@@ -4,6 +4,7 @@ import java.util.concurrent.locks._
 import net.fwbrasil.radon.transaction.TransactionContext
 import net.fwbrasil.radon.transaction.Transaction
 import net.fwbrasil.radon.util.Lockable
+import net.fwbrasil.radon.util.ReferenceWeakValueMap
 
 trait Source[+T] {
 	def unary_! = get.getOrElse(null.asInstanceOf[T])
@@ -15,6 +16,15 @@ trait Sink[-T] {
 	def put(value: Option[T]): Unit
 }
 
+trait RefListener[T] {
+	def notifyGet(ref: Ref[T]) = {
+		
+	}
+	def notifyPut(ref: Ref[T], obj: Option[T]) = {
+		
+	}
+}
+
 class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext) 
     extends Source[T] with Sink[T] with Lockable with java.io.Serializable {
 	
@@ -24,6 +34,9 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	def this()(implicit context: TransactionContext) = this(None)
 	
 	private[this] var _refContent: RefContent[T] = RefContent(None, 0l, 0l, false)
+	
+	@transient
+	private[this] val weakListenersMap = ReferenceWeakValueMap[Int, RefListener[T]]()
 
 	@transient
 	private[radon] val creationTransaction = getRequiredActiveTransaction
@@ -47,17 +60,30 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 		creationTransaction !=null && 
 		!creationTransaction.transient
 	
-	def get: Option[T] = 
-		getRequiredActiveTransaction.get(this)
+	def get: Option[T] = {
+		val result = getRequiredActiveTransaction.get(this)
+		for(listener <- weakListenersMap.values)
+			listener.notifyGet(this)
+		result
+	}
 
-	def put(value: Option[T]): Unit =
+	def put(value: Option[T]): Unit = {
 		getRequiredActiveTransaction.put(this, Option(value).getOrElse(None))
+		for(listener <- weakListenersMap.values)
+			listener.notifyPut(this, value)
+	}
 	
 	def destroy: Unit =
 	    getRequiredActiveTransaction.destroy(this)
 	   
 	def isDestroyed: Boolean =
 		getRequiredActiveTransaction.isDestroyed(this)
+		
+	def isDirty: Boolean =
+		getRequiredActiveTransaction.isDirty(this)
+		
+	def addWeakListener(listener: RefListener[T]) =
+		weakListenersMap += (listener.hashCode() -> listener)
 	
 	override def toString = "Ref("+refContent.toString+")"
 

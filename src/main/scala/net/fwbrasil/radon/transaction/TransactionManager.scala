@@ -15,7 +15,7 @@ class TransactionManager(implicit val context: TransactionContext) {
 		new ExclusiveThreadLocal[Transaction]
 	
 	private[radon] def isActive(transaction: Option[Transaction]) =
-		getActiveTransaction == transaction
+		getActiveTransaction != None && getActiveTransaction == transaction
 
 	private[radon] def activate(transaction: Option[Transaction]) = {
 		val active = getActiveTransaction
@@ -26,9 +26,10 @@ class TransactionManager(implicit val context: TransactionContext) {
 	}
 
 	private[radon] def deactivate(transaction: Option[Transaction]) = {
-		if (getActiveTransaction != transaction)
+		val active = getActiveTransaction
+		if (active != transaction)
 			throw new IllegalStateException("Transaction is not active.")
-		activeTransactionThreadLocal.set(None)
+		activeTransactionThreadLocal.clean(transaction)
 	}
 
 	private[radon] def getRequiredActiveTransaction =

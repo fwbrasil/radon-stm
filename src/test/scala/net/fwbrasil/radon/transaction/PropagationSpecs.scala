@@ -37,7 +37,7 @@ class PropagationSpecs extends Specification {
 	"Never transaction propagation" should {
 		
 		"run without a transaction" in 
-			runWithoutATransaction(notSupported)
+			runWithoutATransaction(never)
 		
 		"do not accept a transaction" in {
 			val transaction = new Transaction

@@ -14,10 +14,9 @@ class Required private[radon] extends Propagation {
 			try {
 				runInTransaction(transaction.get)(f)
 			} finally
-				if(wasActive)
+				if (wasActive)
 					activate(transaction)
-		}
-		else
+		} else
 			runInNewTransactionWithRetry(f)
 	}
 }
@@ -32,7 +31,7 @@ class Mandatory extends Propagation {
 class Never extends Propagation {
 	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
 		import context.transactionManager._
-		if (transaction != None)
+		if (transaction != None || getActiveTransaction != None)
 			throw new NotSupportedTransactionException
 		f
 	}
@@ -40,21 +39,27 @@ class Never extends Propagation {
 class NotSupported extends Propagation {
 	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
 		import context.transactionManager._
-		deactivate(transaction)
+		val wasActive = isActive(transaction)
+		if(wasActive)
+			deactivate(transaction)
 		try {
 			f
 		} finally
-			activate(transaction)
+			if (wasActive)
+				activate(transaction)
 	}
 }
 class RequiresNew extends Propagation {
 	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
 		import context.transactionManager._
-		deactivate(transaction)
+		val wasActive = isActive(transaction)
+		if(wasActive)
+			deactivate(transaction)
 		try {
 			runInNewTransactionWithRetry(f)
 		} finally
-			activate(transaction)
+			if (wasActive)
+				activate(transaction)
 	}
 }
 class Supports extends Propagation {
@@ -69,11 +74,14 @@ class Supports extends Propagation {
 class Transient extends Propagation {
 	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
 		import context.transactionManager._
-		deactivate(transaction)
+		val wasActive = isActive(transaction)
+		if(wasActive)
+			deactivate(transaction)
 		try {
-			runInTransactionWithRetry(new Transaction(true))(f)
+			runInTransactionWithRetry(new Transaction(transient = true))(f)
 		} finally
-			activate(transaction)
+			if (wasActive)
+				activate(transaction)
 	}
 }
 trait PropagationContext {
