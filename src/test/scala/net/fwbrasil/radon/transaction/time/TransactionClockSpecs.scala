@@ -15,9 +15,9 @@ class TransactionClockSpecs extends Specification {
 			val threads = 500
 			val loops = 500
 			var running = List[Thread]()
-			for(_ <- 0 until threads) {
+			for (_ <- 0 until threads) {
 				val thread = runInNewThread {
-					for(_ <- 0 until loops) {
+					for (_ <- 0 until loops) {
 						clock.tick
 					}
 				}
@@ -25,7 +25,7 @@ class TransactionClockSpecs extends Specification {
 			}
 			running.foreach(_.join)
 			val end = clock.tick
-			(end - start - 1) mustEqual threads*loops
+			(end - start - 1) mustEqual threads * loops
 		}
 	}
 }

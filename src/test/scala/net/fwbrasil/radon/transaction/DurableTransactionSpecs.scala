@@ -1,7 +1,7 @@
 package net.fwbrasil.radon.transaction
 
 import net.fwbrasil.radon.RadonContext
-import org.specs2.mutable._ 
+import org.specs2.mutable._
 import net.fwbrasil.radon._
 import org.junit.runner._
 import org.specs2.runner._
@@ -11,10 +11,10 @@ class DurableTransactionSpecs extends Specification {
 
 	class DurableTestContext extends RadonContext {
 		var f: (Transaction) => Unit = _
-		override def makeDurable(transaction: Transaction) = 
+		override def makeDurable(transaction: Transaction) =
 			f(transaction)
 	}
-	
+
 	"Durable transaction" should {
 		"make durable writes" in {
 			val ctx = new DurableTestContext
@@ -24,7 +24,7 @@ class DurableTransactionSpecs extends Specification {
 				transactional(transaction) {
 					new Ref(100)
 				}
-			ctx.f = 
+			ctx.f =
 				(t: Transaction) => {
 					t must beEqualTo(transaction)
 					val assignments = t.refsAssignments
@@ -34,7 +34,7 @@ class DurableTransactionSpecs extends Specification {
 			transaction.commit
 			true must beTrue
 		}
-		
+
 		"don't make durable reads" in {
 			val ctx = new DurableTestContext
 			import ctx._
@@ -43,7 +43,7 @@ class DurableTransactionSpecs extends Specification {
 				transactional(transaction1) {
 					new Ref(100)
 				}
-			ctx.f = 
+			ctx.f =
 				(t: Transaction) => {
 					t must beEqualTo(transaction1)
 					val assignments = t.refsAssignments
@@ -55,14 +55,14 @@ class DurableTransactionSpecs extends Specification {
 			transactional(transaction2) {
 				!ref must beEqualTo(100)
 			}
-			ctx.f = 
+			ctx.f =
 				(t: Transaction) => {
 					throw new IllegalStateException("don't make durable reads")
 				}
 			transaction2.commit
 			true must beTrue
 		}
-		
+
 		"don't make durable transient writes" in {
 			val ctx = new DurableTestContext
 			import ctx._
@@ -71,14 +71,14 @@ class DurableTransactionSpecs extends Specification {
 				transactional(transaction) {
 					new Ref(100)
 				}
-			ctx.f = 
+			ctx.f =
 				(t: Transaction) => {
 					throw new IllegalStateException("don't make durable transient writes")
 				}
 			transaction.commit
 			true must beTrue
 		}
-		
+
 		"rollback when makeDurable throws exception" in {
 			val ctx = new DurableTestContext
 			import ctx._
@@ -87,7 +87,7 @@ class DurableTransactionSpecs extends Specification {
 				transactional(transaction) {
 					new Ref(100)
 				}
-			ctx.f = 
+			ctx.f =
 				(t: Transaction) => {
 					throw new IllegalStateException("error in makeDurable")
 				}
@@ -98,5 +98,5 @@ class DurableTransactionSpecs extends Specification {
 			true must beTrue
 		}
 	}
-	
+
 }

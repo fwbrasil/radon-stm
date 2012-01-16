@@ -13,7 +13,7 @@ class TransactionManager(implicit val context: TransactionContext) {
 
 	private[this] val activeTransactionThreadLocal =
 		new ExclusiveThreadLocal[Transaction]
-	
+
 	private[radon] def isActive(transaction: Option[Transaction]) =
 		getActiveTransaction != None && getActiveTransaction == transaction
 
@@ -57,26 +57,26 @@ class TransactionManager(implicit val context: TransactionContext) {
 
 	private[radon] def runInTransactionWithRetry[A](transaction: Transaction)(f: => A): A = {
 		var retryCount = 0
-		def retry: A = {
-			retryCount += 1
-			transaction.clear
-			if (retryCount < context.retryLimit)
-				attemptTransact
-			else
-				throw new RetryLimitTransactionException
-		}
-		def attemptTransact: A = {
-			try {
-				val result = runInTransaction(transaction)(f)
-				transaction.commit
-				result
-			} catch {
-				case e: ConcurrentTransactionException =>
-					e.refs.foreach((ref) => ref.synchronized(ref.wait(100)))
-					transaction.isRetryWithWrite = e.retryWithWrite
-					retry
+			def retry: A = {
+				retryCount += 1
+				transaction.clear
+				if (retryCount < context.retryLimit)
+					attemptTransact
+				else
+					throw new RetryLimitTransactionException
 			}
-		}
+			def attemptTransact: A = {
+				try {
+					val result = runInTransaction(transaction)(f)
+					transaction.commit
+					result
+				} catch {
+					case e: ConcurrentTransactionException =>
+						e.refs.foreach((ref) => ref.synchronized(ref.wait(100)))
+						transaction.isRetryWithWrite = e.retryWithWrite
+						retry
+				}
+			}
 		attemptTransact
 	}
 

@@ -1,6 +1,6 @@
 package net.fwbrasil.radon.transaction
 
-import org.specs2.mutable._ 
+import org.specs2.mutable._
 import net.fwbrasil.radon.TestRadonContext._
 import net.fwbrasil.radon._
 import net.fwbrasil.radon.dsl.actor._
@@ -92,7 +92,7 @@ class TransactionManagerSpecs extends Specification {
 				manager.getRequiredActiveTransaction must throwA[RequiredTransactionException]
 			}
 		}
-		
+
 		"running in transaction" in {
 			"with some transaction" in {
 				val manager = new TransactionManager()
@@ -117,7 +117,7 @@ class TransactionManagerSpecs extends Specification {
 				manager.getActiveTransaction must beNone
 			}
 		}
-		
+
 		"running in transaction with retry" in {
 			"happy day" in {
 				val manager = new TransactionManager()
@@ -152,7 +152,7 @@ class TransactionManagerSpecs extends Specification {
 					transactional {
 						ref := 200
 					}
-					if(error) {
+					if (error) {
 						error = false
 						throw new ConcurrentTransactionException
 					}
@@ -197,7 +197,7 @@ class TransactionManagerSpecs extends Specification {
 					transactional {
 						ref := 200
 					}
-					if(!transaction.isRetryWithWrite)
+					if (!transaction.isRetryWithWrite)
 						throw new RetryWithWriteTransactionException
 					1
 				} must beEqualTo(1)
@@ -209,5 +209,5 @@ class TransactionManagerSpecs extends Specification {
 			}
 		}
 	}
-	
+
 }

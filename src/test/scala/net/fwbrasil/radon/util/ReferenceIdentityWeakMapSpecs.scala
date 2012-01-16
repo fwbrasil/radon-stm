@@ -6,7 +6,7 @@ import org.specs2.runner._
 
 @RunWith(classOf[JUnitRunner])
 class ReferenceWeakMapSpecs extends Specification {
-	
+
 	"ReferenceWeakMap" should {
 		"remove tuple" in {
 			"if value and key are garbage collected" in {

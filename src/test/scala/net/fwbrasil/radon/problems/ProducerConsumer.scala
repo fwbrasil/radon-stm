@@ -69,7 +69,7 @@ class ProducerConsumer extends Specification {
 		consumer.start
 		producer.join
 		transactionalWhile(buffer.nonEmpty) {}
-		val a= transactional {
+		val a = transactional {
 			buffer.nonEmpty
 		}
 		stop = true

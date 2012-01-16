@@ -91,18 +91,18 @@ class TransactionValidatorSpecs extends Specification {
 					} must not beNull
 				}
 			}
-//			"return error if concurrent transaction is creating the ref" in {
-				//				"during transaction" in
-				//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-				//						val ref =
-				//							inActor1 {
-				//								new Ref(1)
-				//							}
-				//						inActor2 {
-				//							ref := 1
-				//						} must throwA[ConcurrentTransactionException]
-				//					}
-//			}
+			//			"return error if concurrent transaction is creating the ref" in {
+			//				"during transaction" in
+			//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
+			//						val ref =
+			//							inActor1 {
+			//								new Ref(1)
+			//							}
+			//						inActor2 {
+			//							ref := 1
+			//						} must throwA[ConcurrentTransactionException]
+			//					}
+			//			}
 		}
 
 		"validate read" in {
@@ -140,7 +140,7 @@ class TransactionValidatorSpecs extends Specification {
 						actor1.markTransactionNotReadOnly
 						actor1.commit must throwA[ConcurrentTransactionException]
 					} must not beNull
-				} 
+				}
 			}
 			"not return error if concurrent transaction read the ref" in {
 				"during transaction" in {
@@ -179,18 +179,18 @@ class TransactionValidatorSpecs extends Specification {
 					} must not beNull
 				}
 			}
-//			"return error if concurrent transaction is creating the ref" in {
-				//				"during transaction" in
-				//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-				//						val ref = 
-				//							inActor1 {
-				//								new Ref(1)
-				//							}
-				//						inActor2 {
-				//							!ref
-				//						} must throwA[ConcurrentTransactionException]
-				//					}
-//			}
+			//			"return error if concurrent transaction is creating the ref" in {
+			//				"during transaction" in
+			//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
+			//						val ref = 
+			//							inActor1 {
+			//								new Ref(1)
+			//							}
+			//						inActor2 {
+			//							!ref
+			//						} must throwA[ConcurrentTransactionException]
+			//					}
+			//			}
 		}
 		"validate read and write" in {
 			"return error if ref is read and write by concurrent transaction" in {

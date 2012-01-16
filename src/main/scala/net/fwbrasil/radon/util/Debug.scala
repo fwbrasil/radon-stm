@@ -6,14 +6,14 @@ object Debug {
 
 	var isDebuggin = false
 	val debugParkingLot = new ParkingLot
-	
-	def setDebug  = isDebuggin = true
+
+	def setDebug = isDebuggin = true
 	def setNormal = {
 		isDebuggin = false
 		debugParkingLot.unparkAll
 	}
-	
-	def parkIfDebug = 
-		if(isDebuggin)
+
+	def parkIfDebug =
+		if (isDebuggin)
 			debugParkingLot.park
 }

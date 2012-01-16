@@ -9,16 +9,16 @@ case class MarkTransactionNotReadOnlyMessage() extends TransactorMessage[Unit]
 case class StartTransactionIfNotStartedMessage() extends TransactorMessage[Unit]
 
 class ExecutorTransactor(override val oneActorPerThread: Boolean)(implicit context: TransactionContext) extends ExecutorActor(oneActorPerThread) {
-	
+
 	import context._
-	
+
 	val transaction = new Transaction
-	
+
 	override def processExecuteMessage(execute: ExecuteMessage[_]) =
 		transactional(transaction) {
 			super.processExecuteMessage(execute)
 		}
-	
+
 	override def processOtherMessage[A](other: ActorMessage[A]): Unit =
 		other match {
 			case commit: CommitMessage =>
@@ -30,16 +30,16 @@ class ExecutorTransactor(override val oneActorPerThread: Boolean)(implicit conte
 			case mark: MarkTransactionNotReadOnlyMessage =>
 				processWithReply(() => transaction.isRetryWithWrite = true)
 		}
-	
+
 	def commit =
 		syncExec(CommitMessage())
-	
+
 	def rollback =
 		syncExec(RollbackMessage())
-	
+
 	def startTransactionIfNotStarted =
 		syncExec(StartTransactionIfNotStartedMessage())
-		
+
 	def markTransactionNotReadOnly =
 		syncExec(MarkTransactionNotReadOnlyMessage())
 }
@@ -50,4 +50,4 @@ class TransactorDsl(implicit context: TransactionContext) extends AbstractActorD
 
 trait OneTransactorPerThread extends AbstractOneActorPerThread[ExecutorTransactor]
 trait ManyTransactors extends AbstractManyActors[ExecutorTransactor]
-trait TwoTransactors  extends AbstractTwoActors[ExecutorTransactor]
+trait TwoTransactors extends AbstractTwoActors[ExecutorTransactor]

@@ -40,7 +40,7 @@ class NotSupported extends Propagation {
 	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
 		import context.transactionManager._
 		val wasActive = isActive(transaction)
-		if(wasActive)
+		if (wasActive)
 			deactivate(transaction)
 		try {
 			f
@@ -53,7 +53,7 @@ class RequiresNew extends Propagation {
 	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
 		import context.transactionManager._
 		val wasActive = isActive(transaction)
-		if(wasActive)
+		if (wasActive)
 			deactivate(transaction)
 		try {
 			runInNewTransactionWithRetry(f)
@@ -75,7 +75,7 @@ class Transient extends Propagation {
 	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
 		import context.transactionManager._
 		val wasActive = isActive(transaction)
-		if(wasActive)
+		if (wasActive)
 			deactivate(transaction)
 		try {
 			runInTransactionWithRetry(new Transaction(transient = true))(f)

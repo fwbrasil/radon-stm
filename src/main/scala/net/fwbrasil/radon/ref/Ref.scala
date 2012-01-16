@@ -46,7 +46,7 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 
 	def getTransaction =
 		getActiveTransaction
-		
+
 	put(pValueOption)
 
 	private[radon] def refContent =
@@ -90,13 +90,13 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 
 	def addWeakListener(listener: RefListener[T]) =
 		weakListenersMap += (listener.hashCode() -> listener)
-		
+
 	protected def snapshot =
-		if(getTransaction.isDefined)
+		if (getTransaction.isDefined)
 			get
 		else
 			refContent.value
-		
+
 	override def toString =
 		"Ref(" + snapshot + ")"
 }

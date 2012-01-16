@@ -7,11 +7,11 @@ import org.specs2.runner._
 
 @RunWith(classOf[JUnitRunner])
 class ExclusiveThreadLocalSpecs extends Specification {
-	
+
 	class Dummy extends ExclusiveThreadLocalItem
 
 	"An exclusive thread local" should {
-		
+
 		"set value only for the current thread" in {
 			new ActorDsl with TwoActors with OneActorPerThread {
 				val value1 = Option(new Dummy)
@@ -20,7 +20,7 @@ class ExclusiveThreadLocalSpecs extends Specification {
 				inActor1 {
 					exclusiveThreadLocal.set(value1)
 					exclusiveThreadLocal.get must beEqualTo(value1)
-				} 
+				}
 				inActor2 {
 					exclusiveThreadLocal.get must beEqualTo(None)
 				}
@@ -33,7 +33,7 @@ class ExclusiveThreadLocalSpecs extends Specification {
 				}
 			} must not beNull
 		}
-		
+
 		"accept a value that belongs only to the thread" in {
 			new ActorDsl with TwoActors with OneActorPerThread {
 				val value1 = Option(new Dummy)
@@ -49,7 +49,7 @@ class ExclusiveThreadLocalSpecs extends Specification {
 				}
 			} must not beNull
 		}
-		
+
 		"not accept a value that doesn't belong only to the thread" in {
 			new ActorDsl with TwoActors with OneActorPerThread {
 				val value1 = Option(new Dummy)
@@ -60,13 +60,13 @@ class ExclusiveThreadLocalSpecs extends Specification {
 				}
 				inActor2 {
 					exclusiveThreadLocal.set(value1) must throwA[IllegalStateException]
-				} 
+				}
 				inActor2 {
 					exclusiveThreadLocal.get must beEqualTo(None)
 				}
 			} must not beNull
 		}
-		
+
 		"stay consistent with many threads" in {
 			new ActorDsl with ManyActors with OneActorPerThread {
 				val exclusiveThreadLocal = new ExclusiveThreadLocal[Dummy]

@@ -13,32 +13,32 @@ class Statistic(val name: String) {
 		Statistics.touch
 		count.decrementAndGet
 	}
-	def print = 
+	def print =
 		println(name + ": " + count.get)
 }
 
 object Statistics {
 
-	val retryCount = 
+	val retryCount =
 		new Statistic("retryCount")
-	
-	val retryWithWriteCount = 
+
+	val retryWithWriteCount =
 		new Statistic("retryWithWriteCount")
-	
-	val commitCount = 
+
+	val commitCount =
 		new Statistic("commitCount")
-	
-	val waitingCount = 
+
+	val waitingCount =
 		new Statistic("waitingCount")
-	
+
 	var lastPrint = System.currentTimeMillis
-	
+
 	def touch =
-		if(false && (System.currentTimeMillis - lastPrint) > 1000) {
+		if (false && (System.currentTimeMillis - lastPrint) > 1000) {
 			println("**********STATISTICS**********")
 			List(retryCount, retryWithWriteCount, commitCount, waitingCount).foreach(_.print)
 			println("********END STATISTICS********")
 			lastPrint = System.currentTimeMillis
 		}
-		
+
 }

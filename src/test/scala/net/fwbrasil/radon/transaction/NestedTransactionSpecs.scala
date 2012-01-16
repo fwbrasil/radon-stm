@@ -1,6 +1,6 @@
-	package net.fwbrasil.radon.transaction
+package net.fwbrasil.radon.transaction
 
-import org.specs2.mutable._ 
+import org.specs2.mutable._
 import net.fwbrasil.radon.TestRadonContext._
 import net.fwbrasil.radon._
 import org.junit.runner._
@@ -8,9 +8,9 @@ import org.specs2.runner._
 
 @RunWith(classOf[JUnitRunner])
 class NestedTransactionSpecs extends Specification {
-	
+
 	"A nested transaction" should {
-		
+
 		"see the scope of the outer transaction" in {
 			val ref =
 				transactional {
@@ -23,7 +23,7 @@ class NestedTransactionSpecs extends Specification {
 				}
 			}
 		}
-		
+
 		"be isolated" in {
 			val ref =
 				transactional {
@@ -39,7 +39,7 @@ class NestedTransactionSpecs extends Specification {
 				!ref must beEqualTo(200)
 			}
 		}
-		
+
 		"have changes sent to the outer transaction after commit" in {
 			val ref =
 				transactional {
@@ -55,8 +55,8 @@ class NestedTransactionSpecs extends Specification {
 			transactional {
 				!ref must beEqualTo(300)
 			}
-		
-	}
 
-}
+		}
+
+	}
 }

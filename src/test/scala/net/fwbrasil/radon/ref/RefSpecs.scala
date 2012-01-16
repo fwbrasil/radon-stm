@@ -184,10 +184,10 @@ class RefSpecs extends Specification {
 						}
 					transactional(t2) {
 						ref.destroy
-					} 
+					}
 					t2.commit must throwA[ConcurrentTransactionException]
 				}
-				
+
 				"validate concurrent" in {
 					val t1 = new Transaction
 					val t2 = new Transaction
@@ -197,7 +197,7 @@ class RefSpecs extends Specification {
 						}
 					transactional(t1) {
 						ref := 300
-					} 
+					}
 					transactional(t2) {
 						ref.destroy
 					}

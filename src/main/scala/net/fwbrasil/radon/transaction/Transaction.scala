@@ -97,11 +97,11 @@ trait TransactionValidator {
 }
 
 class Transaction(val transient: Boolean = false)(implicit val context: TransactionContext)
-	extends TransactionImplicits
-	with TransactionStopWatch
-	with RefSnapshooter
-	with TransactionValidator
-	with ExclusiveThreadLocalItem {
+		extends TransactionImplicits
+		with TransactionStopWatch
+		with RefSnapshooter
+		with TransactionValidator
+		with ExclusiveThreadLocalItem {
 
 	import context._
 
@@ -158,7 +158,7 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 		startIfNotStarted
 		hasDestroyedFlag(ref)
 	}
-	
+
 	private[radon] def isDirty[T](ref: Ref[T]): Boolean = {
 		startIfNotStarted
 		refsWrite.contains(ref)
@@ -191,17 +191,17 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 						if (!transient && isWrite)
 							context.makeDurable(this)
 					catch {
-						case e => 
+						case e =>
 							prepareRollback
 							throw e
 					} finally {
 
 						for (ref <- refsReadWithoutWrite)
 							setRefContent(ref, false, true)
-	
+
 						for (ref <- refsWrite)
 							setRefContent(ref, true, refsRead.contains(ref))
-	
+
 						Statistics.commitCount.increment
 					}
 				} finally {
@@ -217,7 +217,6 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 		} finally
 			clear
 	}
-
 
 	private[this] def setRefContent(ref: Ref[_], isRefWrite: Boolean, isRefRead: Boolean) = ref.synchronized {
 		val refContent = ref.refContent
@@ -296,7 +295,7 @@ trait TransactionContext extends PropagationContext {
 		val activeTransaction = transactionManager.getActiveTransaction
 		if (activeTransaction != None && activeTransaction != transaction)
 			throw new IllegalStateException("There is another transaction active!")
-		if(transaction.isDefined)
+		if (transaction.isDefined)
 			transaction.synchronized {
 				propagation.execute(transaction)(f)(this)
 			}

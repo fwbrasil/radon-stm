@@ -29,12 +29,12 @@ class ACITest extends Specification {
 			}
 			try {
 				transactional {
-					ref := ref + 200 
+					ref := ref + 200
 					throw new IllegalStateException
 					ref := ref + 200
 				}
-			} catch {case e => }
-				
+			} catch { case e => }
+
 			transactional {
 				!ref must beEqualTo(100)
 			}
