@@ -23,6 +23,9 @@ trait RefListener[T] {
 	def notifyPut(ref: Ref[T], obj: Option[T]) = {
 
 	}
+	def notifyRollback(ref: Ref[T]) = {
+
+	}
 }
 
 class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
@@ -78,6 +81,10 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 		for (listener <- weakListenersMap.values)
 			listener.notifyPut(this, value)
 	}
+
+	private[radon] def notifyRollback =
+		for (listener <- weakListenersMap.values)
+			listener.notifyRollback(this)
 
 	def destroy: Unit =
 		getRequiredTransaction.destroy(this)

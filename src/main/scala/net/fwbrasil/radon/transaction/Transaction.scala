@@ -240,11 +240,14 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 	}
 
 	def prepareRollback = {
+		val refsWrote = refsWrite
 		val refsCreated =
-			refsWrite.filter(_.creationTransaction == this)
+			refsWrote.filter(_.creationTransaction == this)
 		clearValues
 		for (ref <- refsCreated)
 			destroy(ref)
+		for (ref <- refsWrote)
+			ref.notifyRollback
 	}
 
 	def rollback() = {
