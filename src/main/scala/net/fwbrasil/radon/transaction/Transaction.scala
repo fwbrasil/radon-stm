@@ -11,6 +11,7 @@ import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
 import net.fwbrasil.radon.util.Debug
 import net.fwbrasil.radon.util.Lockable._
 import net.fwbrasil.radon.transaction.time._
+import scala.collection.mutable.{ HashMap => MutableHashMap }
 
 trait TransactionImplicits {
 
@@ -24,7 +25,7 @@ trait TransactionImplicits {
 trait RefSnapshooter {
 	this: TransactionImplicits with TransactionStopWatch =>
 
-	private[transaction] var refsSnapshot = Map[Ref[Any], RefContent[Any]]()
+	private[transaction] var refsSnapshot = MutableHashMap[Ref[Any], RefContent[Any]]()
 
 	private[transaction] def hasAValidSnapshot[T](ref: Ref[T]) =
 		refsSnapshot(ref).writeTimestamp < startTimestamp
@@ -36,7 +37,10 @@ trait RefSnapshooter {
 	}
 
 	private[transaction] def hasDestroyedFlag[T](ref: Ref[T]) =
-		(refsSnapshot.contains(ref) && refsSnapshot(ref).destroyedFlag) || ref.refContent.destroyedFlag
+		ref.refContent.destroyedFlag || {
+			val snapshotOption = refsSnapshot.get(ref)
+			(snapshotOption.isDefined && snapshotOption.get.destroyedFlag)
+		}
 
 	private[transaction] def snapshot[T](ref: Ref[T]) =
 		if (!refsSnapshot.contains(ref))
@@ -60,7 +64,7 @@ trait RefSnapshooter {
 		refsSnapshot(ref)
 
 	private[transaction] def clearSnapshots =
-		refsSnapshot = Map[Ref[Any], RefContent[Any]]()
+		refsSnapshot = MutableHashMap[Ref[Any], RefContent[Any]]()
 }
 
 trait TransactionValidator {
