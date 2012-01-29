@@ -39,7 +39,15 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	private[this] var _refContent: RefContent[T] = RefContent(None, 0l, 0l, false)
 
 	@transient
-	private[this] val weakListenersMap = ReferenceWeakValueMap[Int, RefListener[T]]()
+	private[this] var _weakListenersMap = ReferenceWeakValueMap[Int, RefListener[T]]()
+
+	def weakListenersMap = {
+		if (_weakListenersMap == null)
+			_weakListenersMap = ReferenceWeakValueMap[Int, RefListener[T]]()
+		else
+			_weakListenersMap
+		_weakListenersMap
+	}
 
 	@transient
 	private[radon] val creationTransaction = getRequiredTransaction
