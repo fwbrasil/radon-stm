@@ -12,10 +12,10 @@ private[fwbrasil] trait Lockable {
 	private[this] val reentrantWriteLock = reentrantReadWriteLock.writeLock
 
 	private[fwbrasil] def tryReadLock =
-		reentrantReadLock.tryLock //(1, TimeUnit.MICROSECONDS)
+		reentrantReadLock.tryLock
 
 	private[fwbrasil] def tryWriteLock =
-		reentrantWriteLock.tryLock //(1, TimeUnit.MICROSECONDS)
+		reentrantWriteLock.tryLock
 
 	private[fwbrasil] def readLock = {
 		reentrantReadLock.lock

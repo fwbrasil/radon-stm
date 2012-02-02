@@ -81,8 +81,12 @@ abstract class AbstractActorDsl[E <: ExecutorActor] {
 		mainActor.stop
 }
 
-class ActorDsl extends AbstractActorDsl[ExecutorActor] {
+class ActorDsl extends AbstractActorDsl[ExecutorActor] with DelayedInit {
 	def newActor = new ExecutorActor(oneActorPerThread)
+	def delayedInit(x: => Unit) {
+		x
+		stopActors
+	}
 }
 
 trait AbstractOneActorPerThread[E <: ExecutorActor] extends AbstractActorDsl[E] {
@@ -101,12 +105,12 @@ trait AbstractManyActors[E <: ExecutorActor] extends AbstractActorDsl[E] {
 			yield executor.execute(f)
 	def inParallelActors[A](f: => A): List[A] = {
 		var haveToWait = true
-			def function =
-				{
-					while (haveToWait)
-						Thread.sleep(5)
-					f
-				}
+		def function =
+			{
+				while (haveToWait)
+					Thread.sleep(5)
+				f
+			}
 		val futures =
 			for (executor <- actors)
 				yield executor.executeFuture(function)

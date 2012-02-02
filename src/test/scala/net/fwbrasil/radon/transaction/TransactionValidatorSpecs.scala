@@ -13,23 +13,6 @@ class TransactionValidatorSpecs extends Specification {
 	"Transaction validator" should {
 		"validate write" in {
 			"return error if ref is read by concurrent transaction" in {
-				//				"during transaction" in
-				//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-				//						val ref = 
-				//							transactional {
-				//								new Ref(1) 
-				//							}
-				//						actor1.startTransactionIfNotStarted
-				//						inActor2 {
-				//							!ref must beEqualTo(1)
-				//						}
-				//						actor2.markTransactionNotReadOnly
-				//		                actor2.commit
-				//		                inActor1 {
-				//							ref := 10
-				//						} must throwA[ConcurrentTransactionException]
-				//					
-				//					}
 				"on commit" in {
 					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
 						val ref =
@@ -91,37 +74,10 @@ class TransactionValidatorSpecs extends Specification {
 					} must not beNull
 				}
 			}
-			//			"return error if concurrent transaction is creating the ref" in {
-			//				"during transaction" in
-			//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-			//						val ref =
-			//							inActor1 {
-			//								new Ref(1)
-			//							}
-			//						inActor2 {
-			//							ref := 1
-			//						} must throwA[ConcurrentTransactionException]
-			//					}
-			//			}
 		}
 
 		"validate read" in {
 			"return error if ref is write by concurrent transaction" in {
-				//				"during transaction" in
-				//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-				//						val ref = 
-				//							transactional {
-				//								new Ref(1) 
-				//							}
-				//						actor1.startTransactionIfNotStarted
-				//						inActor2 {
-				//							ref := 20
-				//						}
-				//		                actor2.commit
-				//		                inActor1 {
-				//							!ref
-				//						} must throwA[ConcurrentTransactionException]
-				//					}
 				"on commit" in {
 					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
 						val ref =
@@ -179,38 +135,11 @@ class TransactionValidatorSpecs extends Specification {
 					} must not beNull
 				}
 			}
-			//			"return error if concurrent transaction is creating the ref" in {
-			//				"during transaction" in
-			//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-			//						val ref = 
-			//							inActor1 {
-			//								new Ref(1)
-			//							}
-			//						inActor2 {
-			//							!ref
-			//						} must throwA[ConcurrentTransactionException]
-			//					}
-			//			}
 		}
 		"validate read and write" in {
 			"return error if ref is read and write by concurrent transaction" in {
-				//				"during transaction" in 
-				//					new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-				//						val (ref1, ref2) = 
-				//							transactional {
-				//								(new Ref(1), new Ref(2))
-				//							}
-				//						actor1.startTransactionIfNotStarted
-				//						inActor2 {
-				//							ref1 := !ref1 + 19
-				//						}
-				//						actor2.commit
-				//						inActor1 {
-				//							!ref1 
-				//						} must throwA[ConcurrentTransactionException]
-				//					}
 				"under stress" in {
-					new ActorDsl with ManyActors { //with OneActorPerThread {
+					new ActorDsl with ManyActors {
 						override lazy val actorsPoolSize = 10
 						val ref =
 							transactional {
