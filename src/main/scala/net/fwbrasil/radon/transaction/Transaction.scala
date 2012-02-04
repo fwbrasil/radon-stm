@@ -3,7 +3,7 @@ package net.fwbrasil.radon.transaction
 
 import net.fwbrasil.radon.ConcurrentTransactionException
 import net.fwbrasil.radon.RadonContext
-import scala.collection.immutable.HashSet
+import scala.collection.mutable.HashSet
 import net.fwbrasil.radon.ref.Ref
 import net.fwbrasil.radon.ref.RefContent
 import net.fwbrasil.radon.util.Statistics
@@ -11,7 +11,11 @@ import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
 import net.fwbrasil.radon.util.Debug
 import net.fwbrasil.radon.util.Lockable._
 import net.fwbrasil.radon.transaction.time._
-import scala.collection.mutable.{ HashMap => MutableHashMap }
+import java.util.IdentityHashMap
+
+class IdentityHashSet[A] extends HashSet[A] {
+	override def elemHashCode(key: A) = java.lang.System.identityHashCode(key)
+}
 
 trait TransactionImplicits {
 
@@ -25,46 +29,46 @@ trait TransactionImplicits {
 trait RefSnapshooter {
 	this: TransactionImplicits with TransactionStopWatch =>
 
-	private[transaction] var refsSnapshot = MutableHashMap[Ref[Any], RefContent[Any]]()
+	private[transaction] var refsSnapshot = new IdentityHashMap[Ref[Any], RefContent[Any]]()
 
 	private[transaction] def hasAValidSnapshot[T](ref: Ref[T]) =
-		refsSnapshot(ref).writeTimestamp < startTimestamp
+		refsSnapshot.get(ref).writeTimestamp < startTimestamp
 
 	private[transaction] def hasAnOutdatedSnapshot[T](ref: Ref[T]) = {
-		val snapshot = refsSnapshot(ref)
+		val snapshot = refsSnapshot.get(ref)
 		(snapshot.writeTimestamp != ref.refContent.writeTimestamp
 			&& snapshot.readTimestamp != ref.refContent.readTimestamp)
 	}
 
 	private[transaction] def hasDestroyedFlag[T](ref: Ref[T]) =
 		ref.refContent.destroyedFlag || {
-			val snapshotOption = refsSnapshot.get(ref)
+			val snapshotOption = Option(refsSnapshot.get(ref))
 			(snapshotOption.isDefined && snapshotOption.get.destroyedFlag)
 		}
 
 	private[transaction] def snapshot[T](ref: Ref[T]) =
-		if (!refsSnapshot.contains(ref))
-			refsSnapshot += (toAnyRef(ref) -> ref.refContent)
+		if (!refsSnapshot.containsKey(ref))
+			refsSnapshot.put(toAnyRef(ref), ref.refContent)
 
 	private[transaction] def snapshot[T](ref: Ref[T], detroyed: Boolean): Unit = {
 		val oldContent =
-			refsSnapshot.getOrElse(ref, ref.refContent)
+			Option(refsSnapshot.get(ref)).getOrElse(ref.refContent)
 		val newContents = RefContent(oldContent.value, oldContent.readTimestamp, oldContent.writeTimestamp, detroyed)
-		refsSnapshot += (toAnyRef(ref) -> newContents)
+		refsSnapshot.put(toAnyRef(ref), newContents)
 	}
 
 	private[transaction] def snapshot[T](ref: Ref[T], value: Option[T]): Unit = {
 		val oldContent =
-			refsSnapshot.getOrElse(ref, ref.refContent)
+			Option(refsSnapshot.get(ref)).getOrElse(ref.refContent)
 		val newContents = RefContent(value, oldContent.readTimestamp, oldContent.writeTimestamp, false)
-		refsSnapshot += (toAnyRef(ref) -> newContents)
+		refsSnapshot.put(toAnyRef(ref), newContents)
 	}
 
 	private[transaction] def getSnapshot[T](ref: Ref[T]) =
-		refsSnapshot(ref)
+		refsSnapshot.get(ref)
 
 	private[transaction] def clearSnapshots =
-		refsSnapshot = MutableHashMap[Ref[Any], RefContent[Any]]()
+		refsSnapshot = new IdentityHashMap[Ref[Any], RefContent[Any]]()
 }
 
 trait TransactionValidator {
@@ -110,8 +114,8 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 	import context._
 
 	private[radon] var isRetryWithWrite = false
-	private[transaction] var refsRead = HashSet[Ref[Any]]()
-	private[transaction] var refsWrite = HashSet[Ref[Any]]()
+	private[transaction] var refsRead = new IdentityHashSet[Ref[Any]]()
+	private[transaction] var refsWrite = new IdentityHashSet[Ref[Any]]()
 
 	def refsAssignments =
 		(for (refWrite <- refsWrite)
@@ -260,8 +264,8 @@ class Transaction(val transient: Boolean = false)(implicit val context: Transact
 	}
 
 	private[this] def clearValues = {
-		refsRead = HashSet[Ref[Any]]()
-		refsWrite = HashSet[Ref[Any]]()
+		refsRead = new IdentityHashSet[Ref[Any]]()
+		refsWrite = new IdentityHashSet[Ref[Any]]()
 		clearSnapshots
 	}
 

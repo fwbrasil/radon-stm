@@ -39,7 +39,7 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	private[this] var _refContent: RefContent[T] = RefContent(None, 0l, 0l, false)
 
 	@transient
-	private[this] var _weakListenersMap = ReferenceWeakValueMap[Int, RefListener[T]]()
+	private[this] var _weakListenersMap: ReferenceWeakValueMap[Int, RefListener[T]] = _
 
 	def weakListenersMap = {
 		if (_weakListenersMap == null)
@@ -79,20 +79,23 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 
 	def get: Option[T] = {
 		val result = getRequiredTransaction.get(this)
-		for (listener <- weakListenersMap.values)
-			listener.notifyGet(this)
+		if (_weakListenersMap != null)
+			for (listener <- _weakListenersMap.values)
+				listener.notifyGet(this)
 		result
 	}
 
 	def put(value: Option[T]): Unit = {
 		getRequiredTransaction.put(this, Option(value).getOrElse(None))
-		for (listener <- weakListenersMap.values)
-			listener.notifyPut(this, value)
+		if (_weakListenersMap != null)
+			for (listener <- _weakListenersMap.values)
+				listener.notifyPut(this, value)
 	}
 
 	private[radon] def notifyRollback =
-		for (listener <- weakListenersMap.values)
-			listener.notifyRollback(this)
+		if (_weakListenersMap != null)
+			for (listener <- _weakListenersMap.values)
+				listener.notifyRollback(this)
 
 	def destroy: Unit =
 		getRequiredTransaction.destroy(this)
