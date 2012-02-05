@@ -104,12 +104,14 @@ trait TransactionValidator {
 		isRefWroteAfterTheStartOfTransaction(ref) && ref.destroyedFlag
 }
 
-class Transaction(val transient: Boolean = false)(implicit val context: TransactionContext)
+class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
 		extends TransactionImplicits
 		with TransactionStopWatch
 		with RefSnapshooter
 		with TransactionValidator
 		with ExclusiveThreadLocalItem {
+
+	def this()(implicit context: TransactionContext) = this(false)
 
 	import context._
 

@@ -23,10 +23,11 @@ object RadonStmBuild extends Build {
     		settings = Defaults.defaultSettings ++ Seq(
               libraryDependencies ++= 
                   Seq(junit, specs2, scalaz, commonsCollections),
-              publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))), //Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as("maven") withPermissions("0644")),
+//              publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))), 
+              publishTo := Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as("maven") withPermissions("0644")),
     	      organization := "net.fwbrasil",
     	      scalaVersion := "2.9.1",
-    	      version := "0.4-SNAPSHOT",
+    	      version := "0.6",
     	      resolvers ++= customResolvers
             )
     	)
