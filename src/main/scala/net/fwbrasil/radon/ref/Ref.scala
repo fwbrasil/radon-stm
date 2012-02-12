@@ -60,7 +60,7 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 
 	put(pValueOption)
 
-	private[radon] def refContent =
+	private[fwbrasil] def refContent =
 		_refContent
 
 	private[fwbrasil] def setRefContent(value: Option[T]): Unit =
@@ -110,9 +110,12 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 		weakListenersMap += (listener.hashCode() -> listener)
 
 	protected def snapshot =
-		if (getTransaction.isDefined)
-			get
-		else
+		if (getTransaction.isDefined) {
+			if (!isDestroyed)
+				get
+			else
+				"destroyed"
+		} else
 			refContent.value
 
 	override def toString =
