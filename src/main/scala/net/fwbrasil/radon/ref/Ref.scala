@@ -69,6 +69,9 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	private[fwbrasil] def setRefContent(pValue: Option[T], pReadTimestamp: Long, pWriteTimestamp: Long, pDestroyedFlag: Boolean): Unit =
 		_refContent = RefContent[T](pValue, pReadTimestamp, pWriteTimestamp, pDestroyedFlag)
 
+	private[fwbrasil] def destroyInternal =
+		setRefContent(None, readTimestamp, writeTimestamp, true)
+
 	private[radon] def readTimestamp = refContent.readTimestamp
 	private[radon] def writeTimestamp = refContent.writeTimestamp
 	private[radon] def destroyedFlag = refContent.destroyedFlag
@@ -115,8 +118,9 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 				get
 			else
 				"destroyed"
-		} else
-			refContent.value
+		} else if (!_refContent.destroyedFlag)
+			_refContent.value
+		else "destroyed"
 
 	override def toString =
 		"Ref(" + snapshot + ")"
