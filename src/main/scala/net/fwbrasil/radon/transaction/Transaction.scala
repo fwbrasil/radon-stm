@@ -120,11 +120,11 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	private[transaction] var refsWrite = new IdentityHashSet[Ref[Any]]()
 
 	def refsAssignments =
-		(for (refWrite <- refsWrite)
+		(for (refWrite <- refsWrite.toList)
 			yield (refWrite -> {
 			val snapshot = getSnapshot(refWrite)
 			(snapshot.value, snapshot.destroyedFlag)
-		})).toSet
+		})).toList
 
 	private[transaction] def isReadOnly =
 		!isRetryWithWrite && refsWrite.isEmpty
