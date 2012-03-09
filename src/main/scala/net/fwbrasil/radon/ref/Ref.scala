@@ -117,10 +117,11 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 			if (!isDestroyed)
 				get
 			else
-				"destroyed"
+				Option("destroyed")
 		} else if (!_refContent.destroyedFlag)
 			_refContent.value
-		else "destroyed"
+		else
+			Option("destroyed")
 
 	override def toString =
 		"Ref(" + snapshot + ")"
