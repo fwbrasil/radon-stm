@@ -27,7 +27,7 @@ object RadonStmBuild extends Build {
               publishTo := Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as("maven") withPermissions("0644")),
     	      organization := "net.fwbrasil",
     	      scalaVersion := "2.9.1",
-    	      version := "0.7-SNAPSHOT",
+    	      version := "0.8-SNAPSHOT",
     	      resolvers ++= customResolvers
             )
     	)
