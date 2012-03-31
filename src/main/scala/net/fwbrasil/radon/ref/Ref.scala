@@ -26,6 +26,9 @@ trait RefListener[T] {
 	def notifyRollback(ref: Ref[T]) = {
 
 	}
+	def notifyCommit(ref: Ref[T]) = {
+
+	}
 }
 
 class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
@@ -66,8 +69,12 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	private[fwbrasil] def setRefContent(value: Option[T]): Unit =
 		setRefContent(value, readTimestamp, writeTimestamp, destroyedFlag)
 
-	private[fwbrasil] def setRefContent(pValue: Option[T], pReadTimestamp: Long, pWriteTimestamp: Long, pDestroyedFlag: Boolean): Unit =
+	private[fwbrasil] def setRefContent(pValue: Option[T], pReadTimestamp: Long, pWriteTimestamp: Long, pDestroyedFlag: Boolean): Unit = {
+		if (_weakListenersMap != null)
+			for (listener <- _weakListenersMap.values)
+				listener.notifyCommit(this)
 		_refContent = RefContent[T](pValue, pReadTimestamp, pWriteTimestamp, pDestroyedFlag)
+	}
 
 	private[fwbrasil] def destroyInternal =
 		setRefContent(None, readTimestamp, writeTimestamp, true)

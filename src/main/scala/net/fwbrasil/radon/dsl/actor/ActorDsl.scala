@@ -30,9 +30,9 @@ class ExecutorActor(val oneActorPerThread: Boolean) extends Actor {
 		processWithReply(execute.f)
 
 	def processWithReply[A](f: () => A) =
-		try {
+		try
 			reply(OkMessage(f()))
-		} catch {
+		catch {
 			case ex: Exception => reply(ExceptionMessage(ex))
 		}
 
@@ -47,6 +47,7 @@ class ExecutorActor(val oneActorPerThread: Boolean) extends Actor {
 		else loop {
 			f
 		}
+
 	def execute[A](f: => A) =
 		syncExec(ExecuteMessage(() => f))
 
