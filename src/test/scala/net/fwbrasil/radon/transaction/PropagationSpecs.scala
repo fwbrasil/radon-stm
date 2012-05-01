@@ -99,7 +99,7 @@ class PropagationSpecs extends Specification {
 			transactional(transaction, propagation) {
 				new Ref(new Object)
 			}
-		transaction.refsAssignments.first._1 must beEqualTo(ref)
+		transaction.refsAssignments.head._1 must beEqualTo(ref)
 		transaction.commit
 		true must beTrue
 	}

@@ -99,7 +99,7 @@ class BankFrenzy extends Specification {
 	def transfer(amount: Long, from: Account, to: Account) {
 		log := !log ++ List(Transfer(amount, from, to))
 
-		val less = Math.round(amount * 0.075)
+		val less = scala.math.round(amount * 0.075)
 
 		from := from - amount
 		to := to + (amount - less)

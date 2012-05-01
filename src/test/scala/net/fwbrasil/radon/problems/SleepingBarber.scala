@@ -42,14 +42,14 @@ class SleepingBarber extends Specification {
 			for (chair <- chairs if (chair.isEmpty))
 				yield chair
 		def sitDown(customer: Customer) =
-			emptyChairs.first.sitDown(customer)
+			emptyChairs.head.sitDown(customer)
 		def nonEmptyChairs =
 			for (chair <- chairs if (!chair.isEmpty))
 				yield chair
 		def hasCustomerWaiting =
 			nonEmptyChairs.nonEmpty
 		def pickUpACustomer = {
-			val chair = nonEmptyChairs.first
+			val chair = nonEmptyChairs.head
 			val customer = !chair
 			chair.put(None)
 			customer

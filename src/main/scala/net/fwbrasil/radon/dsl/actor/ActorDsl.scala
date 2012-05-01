@@ -67,8 +67,8 @@ object ExecutorActor {
 		ret match {
 			case exm: ExceptionMessage[_] =>
 				throw exm.ex
-			case ok: OkMessage[A] =>
-				ok.ret
+			case ok: OkMessage[_] =>
+				ok.ret.asInstanceOf[A]
 		}
 }
 
@@ -106,12 +106,12 @@ trait AbstractManyActors[E <: ExecutorActor] extends AbstractActorDsl[E] {
 			yield executor.execute(f)
 	def inParallelActors[A](f: => A): List[A] = {
 		var haveToWait = true
-		def function =
-			{
-				while (haveToWait)
-					Thread.sleep(5)
-				f
-			}
+			def function =
+				{
+					while (haveToWait)
+						Thread.sleep(5)
+					f
+				}
 		val futures =
 			for (executor <- actors)
 				yield executor.executeFuture(function)
@@ -120,8 +120,8 @@ trait AbstractManyActors[E <: ExecutorActor] extends AbstractActorDsl[E] {
 			yield future() match {
 			case exm: ExceptionMessage[_] =>
 				throw exm.ex
-			case ok: OkMessage[A] =>
-				ok.ret
+			case ok: OkMessage[_] =>
+				ok.ret.asInstanceOf[A]
 		}
 	}
 	def actorsSize = actors.size
