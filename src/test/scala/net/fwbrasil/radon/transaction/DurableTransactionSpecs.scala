@@ -35,34 +35,6 @@ class DurableTransactionSpecs extends Specification {
 			true must beTrue
 		}
 
-		"don't make durable reads" in {
-			val ctx = new DurableTestContext
-			import ctx._
-			val transaction1 = new Transaction
-			val ref =
-				transactional(transaction1) {
-					new Ref(100)
-				}
-			ctx.f =
-				(t: Transaction) => {
-					t must beEqualTo(transaction1)
-					val assignments = t.refsAssignments
-					assignments.size must beEqualTo(1)
-					assignments.head must beEqualTo(ref -> (Some(100), false))
-				}
-			transaction1.commit
-			val transaction2 = new Transaction
-			transactional(transaction2) {
-				!ref must beEqualTo(100)
-			}
-			ctx.f =
-				(t: Transaction) => {
-					throw new IllegalStateException("don't make durable reads")
-				}
-			transaction2.commit
-			true must beTrue
-		}
-
 		"don't make durable transient writes" in {
 			val ctx = new DurableTestContext
 			import ctx._
@@ -92,6 +64,7 @@ class DurableTransactionSpecs extends Specification {
 					throw new IllegalStateException("error in makeDurable")
 				}
 			transaction.commit must throwA[IllegalStateException]
+			ctx.f = (t: Transaction) => {}
 			transactional {
 				ref.isDestroyed must beTrue
 			}

@@ -34,7 +34,7 @@ class RefSpecs extends Specification {
 
 			"set null if is created without a value" in transactional {
 				val ref = new Ref[Int]()
-				!ref must beNull
+				!ref must beEqualTo(0)
 				//				ref.get must beNone
 			}
 

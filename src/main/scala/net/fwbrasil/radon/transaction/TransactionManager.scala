@@ -32,11 +32,11 @@ class TransactionManager(implicit val context: TransactionContext) {
 		activeTransactionThreadLocal.clean(transaction)
 	}
 
-	private[radon] def getRequiredActiveTransaction =
+	private[fwbrasil] def getRequiredActiveTransaction =
 		getActiveTransaction.getOrElse(
 			throw new RequiredTransactionException)
 
-	private[radon] def getActiveTransaction =
+	private[fwbrasil] def getActiveTransaction =
 		activeTransactionThreadLocal.get
 
 	private[radon] def runInTransaction[A](transaction: Transaction)(f: => A): A = {

@@ -135,9 +135,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	private[this] def isWriteOnly =
 		isWrite && refsRead.isEmpty
 
-	private[this] def isTransactionDoNothing =
-		refsWrite.isEmpty && refsRead.isEmpty
-
 	private[transaction] def retryIfTrue(condition: Boolean, refs: Ref[_]*) =
 		if (condition)
 			retry(refs: _*)
@@ -175,8 +172,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	}
 
 	def commit(): Unit = {
-		if (!isTransactionDoNothing) try {
-
+		try {
 			val refsReadWithoutWrite = refsRead -- refsWrite
 			val readUnlockeds = lockall(refsReadWithoutWrite, _.tryReadLock)
 			try {
@@ -186,6 +182,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 				try {
 					retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
 
+					startIfNotStarted
 					stop
 
 					refsRead.foreach(validateContext(_))
@@ -198,7 +195,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 					refsWrite.foreach(validateWrite(_))
 
 					try
-						if (!transient && isWrite)
+						if (!transient)
 							context.makeDurable(this)
 					catch {
 						case e =>
@@ -280,7 +277,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
 trait TransactionContext extends PropagationContext {
 
-	private[radon] val transactionManager =
+	private[fwbrasil] val transactionManager =
 		new TransactionManager()(this)
 
 	private[radon] val transactionClock = new time.TransactionClock
