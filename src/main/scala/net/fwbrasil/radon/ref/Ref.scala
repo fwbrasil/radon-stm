@@ -39,7 +39,7 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	def this(pValue: T)(implicit context: TransactionContext) = this(Option(pValue))
 	def this()(implicit context: TransactionContext) = this(None)
 
-	private[this] var _refContent: RefContent[T] = RefContent(None, 0l, 0l, false)
+	private[this] var _refContent: RefContent[T] = new RefContent(None, 0l, 0l, false)
 
 	@transient
 	private[this] var _weakListenersMap: ReferenceWeakValueMap[Int, RefListener[T]] = _
@@ -73,7 +73,7 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 		if (_weakListenersMap != null)
 			for (listener <- _weakListenersMap.values)
 				listener.notifyCommit(this)
-		_refContent = RefContent[T](pValue, pReadTimestamp, pWriteTimestamp, pDestroyedFlag)
+		_refContent = new RefContent[T](pValue, pReadTimestamp, pWriteTimestamp, pDestroyedFlag)
 	}
 
 	private[fwbrasil] def destroyInternal =
@@ -139,7 +139,7 @@ object Ref {
 	def apply[T](implicit context: TransactionContext) = new Ref
 }
 
-case class RefContent[T](value: Option[T], readTimestamp: Long, writeTimestamp: Long, destroyedFlag: Boolean)
+class RefContent[T](val value: Option[T], val readTimestamp: Long, val writeTimestamp: Long, val destroyedFlag: Boolean)
 
 trait RefContext {
 

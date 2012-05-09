@@ -12,10 +12,11 @@ import net.fwbrasil.radon.util.Debug
 import net.fwbrasil.radon.util.Lockable._
 import net.fwbrasil.radon.transaction.time._
 import java.util.IdentityHashMap
+import java.util.HashMap
 
-class IdentityHashSet[A] extends HashSet[A] {
-	override def elemHashCode(key: A) = java.lang.System.identityHashCode(key)
-}
+//class IdentityHashSet[A] extends HashSet[A] {
+//	override def elemHashCode(key: A) = java.lang.System.identityHashCode(key)
+//}
 
 trait TransactionImplicits {
 
@@ -51,17 +52,19 @@ trait RefSnapshooter {
 			refsSnapshot.put(toAnyRef(ref), ref.refContent)
 
 	private[transaction] def snapshot[T](ref: Ref[T], detroyed: Boolean): Unit = {
-		val oldContent =
-			Option(refsSnapshot.get(ref)).getOrElse(ref.refContent)
-		val newContents = RefContent(oldContent.value, oldContent.readTimestamp, oldContent.writeTimestamp, detroyed)
-		refsSnapshot.put(toAnyRef(ref), newContents)
+		val newContent =
+			Option(refsSnapshot.get(ref))
+				.map(c => new RefContent(c.value, c.readTimestamp, c.writeTimestamp, detroyed))
+				.getOrElse(ref.refContent)
+		refsSnapshot.put(toAnyRef(ref), newContent)
 	}
 
 	private[transaction] def snapshot[T](ref: Ref[T], value: Option[T]): Unit = {
-		val oldContent =
-			Option(refsSnapshot.get(ref)).getOrElse(ref.refContent)
-		val newContents = RefContent(value, oldContent.readTimestamp, oldContent.writeTimestamp, false)
-		refsSnapshot.put(toAnyRef(ref), newContents)
+		val newContent =
+			Option(refsSnapshot.get(ref))
+				.map(c => new RefContent(value, c.readTimestamp, c.writeTimestamp, false))
+				.getOrElse(ref.refContent)
+		refsSnapshot.put(toAnyRef(ref), newContent)
 	}
 
 	private[transaction] def getSnapshot[T](ref: Ref[T]) =
@@ -116,8 +119,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	import context._
 
 	private[radon] var isRetryWithWrite = false
-	private[transaction] var refsRead = new IdentityHashSet[Ref[Any]]()
-	private[transaction] var refsWrite = new IdentityHashSet[Ref[Any]]()
+	private[transaction] var refsRead = new HashSet[Ref[Any]]()
+	private[transaction] var refsWrite = new HashSet[Ref[Any]]()
 
 	def refsAssignments =
 		(for (refWrite <- refsWrite.toList)
@@ -174,10 +177,10 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	def commit(): Unit = {
 		try {
 			val refsReadWithoutWrite = refsRead -- refsWrite
-			val readUnlockeds = lockall(refsReadWithoutWrite, _.tryReadLock)
+			val (readLockeds, readUnlockeds) = lockall(refsReadWithoutWrite, _.tryReadLock)
 			try {
 				retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds.toSeq: _*)
-				val writeUnlockeds = lockall(refsWrite, _.tryWriteLock)
+				val (writeLockeds, writeUnlockeds) = lockall(refsWrite, _.tryWriteLock)
 
 				try {
 					retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
@@ -185,10 +188,10 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 					startIfNotStarted
 					stop
 
-					refsRead.foreach(validateContext(_))
+					refsReadWithoutWrite.foreach(validateContext(_))
 					refsWrite.foreach(validateContext(_))
 
-					refsRead.foreach(validateConcurrentRefCreation(_))
+					refsReadWithoutWrite.foreach(validateConcurrentRefCreation(_))
 					refsWrite.foreach(validateConcurrentRefCreation(_))
 
 					refsRead.foreach(validateRead(_))
@@ -212,12 +215,10 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 						Statistics.commitCount.increment
 					}
 				} finally {
-					val writeLockeds = (refsWrite -- writeUnlockeds)
 					writeLockeds.foreach(_.writeUnlock)
 					writeLockeds.foreach((ref) => ref.synchronized(ref.notify))
 				}
 			} finally {
-				val readLockeds = (refsReadWithoutWrite -- readUnlockeds)
 				readLockeds.foreach(_.readUnlock)
 				readLockeds.foreach((ref) => ref.synchronized(ref.notify))
 			}
@@ -226,25 +227,35 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	}
 
 	private[this] def setRefContent(ref: Ref[_], isRefWrite: Boolean, isRefRead: Boolean) = ref.synchronized {
-		val refContent = ref.refContent
-		val (value, destroyedFlag) =
-			if (!transient && isRefWrite && refContent.writeTimestamp < startTimestamp) {
-				val snapshot = getSnapshot(ref)
-				(snapshot.value, snapshot.destroyedFlag)
-			} else
-				(refContent.value, refContent.destroyedFlag)
-		val readTimestamp =
-			if (!transient && isRefRead && !isReadOnly && refContent.readTimestamp < startTimestamp)
-				startTimestamp
-			else
-				refContent.readTimestamp
-		val writeTimestamp =
-			if (!transient && isRefWrite && refContent.writeTimestamp < startTimestamp)
-				endTimestamp
-			else
-				refContent.writeTimestamp
-		ref.setRefContent(value, readTimestamp, writeTimestamp, destroyedFlag)
+		if (!transient) {
+			val refContent = ref.refContent
+			val newRefContent =
+				valueAndDestroyedFlag(ref, isRefWrite, isRefRead, refContent)
+			val read =
+				readTimestamp(isRefRead, refContent)
+			val write =
+				writeTimestamp(isRefWrite, refContent)
+			ref.setRefContent(newRefContent.value, read, write, newRefContent.destroyedFlag)
+		}
 	}
+
+	private[this] def valueAndDestroyedFlag(ref: Ref[_], isRefWrite: Boolean, isRefRead: Boolean, refContent: RefContent[_]) =
+		if (isRefWrite && refContent.writeTimestamp < startTimestamp)
+			getSnapshot(ref)
+		else
+			refContent
+
+	private[this] def readTimestamp(isRefRead: Boolean, refContent: RefContent[_]) =
+		if (isRefRead && !isReadOnly && refContent.readTimestamp < startTimestamp)
+			startTimestamp
+		else
+			refContent.readTimestamp
+
+	private[this] def writeTimestamp(isRefWrite: Boolean, refContent: RefContent[_]) =
+		if (isRefWrite && refContent.writeTimestamp < startTimestamp)
+			endTimestamp
+		else
+			refContent.writeTimestamp
 
 	def prepareRollback = {
 		val refsWrote = refsWrite
@@ -263,8 +274,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	}
 
 	private[this] def clearValues = {
-		refsRead = new IdentityHashSet[Ref[Any]]()
-		refsWrite = new IdentityHashSet[Ref[Any]]()
+		refsRead = new HashSet[Ref[Any]]()
+		refsWrite = new HashSet[Ref[Any]]()
 		clearSnapshots
 	}
 

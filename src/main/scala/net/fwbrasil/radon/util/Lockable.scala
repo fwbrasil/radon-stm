@@ -4,6 +4,7 @@ import scala.collection._
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.TimeUnit
+import scala.collection.mutable.ListBuffer
 
 private[fwbrasil] trait Lockable {
 
@@ -61,7 +62,14 @@ private[fwbrasil] trait Lockable {
 }
 
 object Lockable {
-	def lockall[L <% Lockable](lockables: Set[L], lockFunc: (Lockable) => Boolean) =
-		for (lockable <- lockables if (!lockFunc(lockable)))
-			yield lockable
+	def lockall[L <% Lockable](lockables: Set[L], lockFunc: (Lockable) => Boolean) = {
+		val locked = ListBuffer[L]()
+		val unlocked = ListBuffer[L]()
+		for (lockable <- lockables)
+			if (lockFunc(lockable))
+				locked += lockable
+			else
+				unlocked += lockable
+		(locked.toList, unlocked.toList)
+	}
 }
