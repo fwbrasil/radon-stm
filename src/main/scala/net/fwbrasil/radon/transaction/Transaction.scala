@@ -52,19 +52,17 @@ trait RefSnapshooter {
 			refsSnapshot.put(toAnyRef(ref), ref.refContent)
 
 	private[transaction] def snapshot[T](ref: Ref[T], detroyed: Boolean): Unit = {
-		val newContent =
-			Option(refsSnapshot.get(ref))
-				.map(c => new RefContent(c.value, c.readTimestamp, c.writeTimestamp, detroyed))
-				.getOrElse(ref.refContent)
-		refsSnapshot.put(toAnyRef(ref), newContent)
+		val oldContent =
+			Option(refsSnapshot.get(ref)).getOrElse(ref.refContent)
+		val newContents = new RefContent(oldContent.value, oldContent.readTimestamp, oldContent.writeTimestamp, detroyed)
+		refsSnapshot.put(toAnyRef(ref), newContents)
 	}
 
 	private[transaction] def snapshot[T](ref: Ref[T], value: Option[T]): Unit = {
-		val newContent =
-			Option(refsSnapshot.get(ref))
-				.map(c => new RefContent(value, c.readTimestamp, c.writeTimestamp, false))
-				.getOrElse(ref.refContent)
-		refsSnapshot.put(toAnyRef(ref), newContent)
+		val oldContent =
+			Option(refsSnapshot.get(ref)).getOrElse(ref.refContent)
+		val newContents = new RefContent(value, oldContent.readTimestamp, oldContent.writeTimestamp, false)
+		refsSnapshot.put(toAnyRef(ref), newContents)
 	}
 
 	private[transaction] def getSnapshot[T](ref: Ref[T]) =
