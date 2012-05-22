@@ -34,3 +34,36 @@ object ReferenceWeakValueMap extends MutableMapFactory[ReferenceWeakValueMap] {
 	implicit def canBuildFrom[A, B]: CanBuildFrom[Coll, (A, B), ReferenceWeakValueMap[A, B]] = new MapCanBuildFrom[A, B]
 	def empty[A, B]: ReferenceWeakValueMap[A, B] = new ReferenceWeakValueMap[A, B]
 }
+
+// SOFT
+
+class ReferenceSoftMap[A, B] extends JMapWrapper[A, B](new ReferenceMapWrapped(AbstractReferenceMap.SOFT, AbstractReferenceMap.SOFT).asInstanceOf[java.util.Map[A, B]])
+		with JMapWrapperLike[A, B, ReferenceSoftMap[A, B]] {
+	override def empty = new ReferenceSoftMap[A, B]
+}
+
+object ReferenceSoftMap extends MutableMapFactory[ReferenceSoftMap] {
+	implicit def canBuildFrom[A, B]: CanBuildFrom[Coll, (A, B), ReferenceSoftMap[A, B]] = new MapCanBuildFrom[A, B]
+	def empty[A, B]: ReferenceSoftMap[A, B] = new ReferenceSoftMap[A, B]
+}
+
+class ReferenceSoftKeyMap[A, B] extends JMapWrapper[A, B](new ReferenceMapWrapped(AbstractReferenceMap.SOFT, AbstractReferenceMap.HARD).asInstanceOf[java.util.Map[A, B]])
+		with JMapWrapperLike[A, B, ReferenceSoftKeyMap[A, B]] {
+	override def empty = new ReferenceSoftKeyMap[A, B]
+}
+
+object ReferenceSoftKeyMap extends MutableMapFactory[ReferenceSoftKeyMap] {
+	implicit def canBuildFrom[A, B]: CanBuildFrom[Coll, (A, B), ReferenceSoftKeyMap[A, B]] = new MapCanBuildFrom[A, B]
+	def empty[A, B]: ReferenceSoftKeyMap[A, B] = new ReferenceSoftKeyMap[A, B]
+}
+
+class ReferenceSoftValueMap[A, B] extends JMapWrapper[A, B](new ReferenceMapWrapped(AbstractReferenceMap.HARD, AbstractReferenceMap.SOFT).asInstanceOf[java.util.Map[A, B]])
+		with JMapWrapperLike[A, B, ReferenceSoftValueMap[A, B]] {
+	override def empty = new ReferenceSoftValueMap[A, B]
+}
+
+object ReferenceSoftValueMap extends MutableMapFactory[ReferenceSoftValueMap] {
+	implicit def canBuildFrom[A, B]: CanBuildFrom[Coll, (A, B), ReferenceSoftValueMap[A, B]] = new MapCanBuildFrom[A, B]
+	def empty[A, B]: ReferenceSoftValueMap[A, B] = new ReferenceSoftValueMap[A, B]
+}
+
