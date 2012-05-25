@@ -177,28 +177,27 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 			val refsReadWithoutWrite = refsRead -- refsWrite
 			val (readLockeds, readUnlockeds) = lockall(refsReadWithoutWrite, _.tryReadLock)
 			try {
-				retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds.toSeq: _*)
 				val (writeLockeds, writeUnlockeds) = lockall(refsWrite, _.tryWriteLock)
-
 				try {
-					retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
 
 					startIfNotStarted
 					stop
 
-					refsReadWithoutWrite.foreach(validateContext(_))
-					refsWrite.foreach(validateContext(_))
+					try {
+						retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds.toSeq: _*)
+						retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
+						refsReadWithoutWrite.foreach(validateContext(_))
+						refsWrite.foreach(validateContext(_))
 
-					refsReadWithoutWrite.foreach(validateConcurrentRefCreation(_))
-					refsWrite.foreach(validateConcurrentRefCreation(_))
+						refsReadWithoutWrite.foreach(validateConcurrentRefCreation(_))
+						refsWrite.foreach(validateConcurrentRefCreation(_))
 
-					refsRead.foreach(validateRead(_))
-					refsWrite.foreach(validateWrite(_))
+						refsRead.foreach(validateRead(_))
+						refsWrite.foreach(validateWrite(_))
 
-					try
 						if (!transient)
 							context.makeDurable(this)
-					catch {
+					} catch {
 						case e =>
 							prepareRollback
 							throw e
@@ -233,6 +232,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 				readTimestamp(isRefRead, refContent)
 			val write =
 				writeTimestamp(isRefWrite, refContent)
+			require(ref.creationTransaction != this || write != 0)
 			ref.setRefContent(newRefContent.value, read, write, newRefContent.destroyedFlag)
 		}
 	}
