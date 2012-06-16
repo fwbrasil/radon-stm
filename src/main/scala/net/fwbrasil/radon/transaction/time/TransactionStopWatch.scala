@@ -6,8 +6,8 @@ trait TransactionStopWatch {
 
 	private[transaction] implicit val context: TransactionContext
 
-	private[radon] var startTimestamp = 0l
-	private[radon] var endTimestamp = Long.MaxValue
+	private[fwbrasil] var startTimestamp = 0l
+	private[fwbrasil] var endTimestamp = Long.MaxValue
 
 	def startIfNotStarted() =
 		if (startTimestamp == 0)
