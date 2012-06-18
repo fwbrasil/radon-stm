@@ -43,13 +43,18 @@ trait RefSnapshooter {
 
 	private[transaction] def hasDestroyedFlag[T](ref: Ref[T]) =
 		ref.refContent.destroyedFlag || {
-			val snapshotOption = Option(refsSnapshot.get(ref))
-			(snapshotOption.isDefined && snapshotOption.get.destroyedFlag)
+			val snapshot = refsSnapshot.get(ref)
+			(snapshot != null && snapshot.destroyedFlag)
 		}
 
-	private[transaction] def snapshot[T](ref: Ref[T]) =
-		if (!refsSnapshot.containsKey(ref))
+	private[transaction] def snapshot[T](ref: Ref[T]) = {
+		val snap = refsSnapshot.get(ref)
+		if (snap == null) {
 			refsSnapshot.put(toAnyRef(ref), ref.refContent)
+			ref.refContent
+		} else
+			snap
+	}
 
 	private[transaction] def snapshot[T](ref: Ref[T], detroyed: Boolean): Unit = {
 		val oldContent =
@@ -150,9 +155,9 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	private[radon] def get[T](ref: Ref[T]): Option[T] = {
 		startIfNotStarted
 		validateIfIsDestroyed(ref)
-		snapshot(ref)
+		val result = snapshot(ref)
 		refsRead += ref
-		getSnapshot(ref).value.asInstanceOf[Option[T]]
+		result.value.asInstanceOf[Option[T]]
 	}
 
 	private[radon] def destroy[T](ref: Ref[T]): Unit = {
