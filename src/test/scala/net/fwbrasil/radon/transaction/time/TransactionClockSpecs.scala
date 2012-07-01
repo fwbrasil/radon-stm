@@ -12,7 +12,7 @@ class TransactionClockSpecs extends Specification {
 		"have unique ticks" in {
 			val clock = new TransactionClock
 			val start = clock.tick
-			val threads = 500
+			val threads = 50
 			val loops = 500
 			var running = List[Thread]()
 			for (_ <- 0 until threads) {
