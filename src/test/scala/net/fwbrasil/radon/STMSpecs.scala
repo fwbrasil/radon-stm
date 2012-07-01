@@ -182,7 +182,7 @@ class STMSpecs extends Specification {
 	}
 
 	"handle scads of conflicts" in {
-		val NUM = 500
+		val NUM = 10
 		val IT = 1
 
 		val ref = transactional {
