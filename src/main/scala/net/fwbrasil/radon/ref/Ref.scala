@@ -5,6 +5,7 @@ import net.fwbrasil.radon.transaction.TransactionContext
 import net.fwbrasil.radon.transaction.Transaction
 import net.fwbrasil.radon.util.Lockable
 import net.fwbrasil.radon.util.ReferenceWeakValueMap
+import net.fwbrasil.radon.transaction.NestedTransaction
 
 trait Source[+T] {
 	def unary_! = get.getOrElse(null.asInstanceOf[T])
@@ -95,12 +96,17 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 		result
 	}
 
-	def put(value: Option[T]): Unit = {
-		getRequiredTransaction.put(this, Option(value).getOrElse(None))
-		if (_weakListenersMap != null)
-			for (listener <- _weakListenersMap.values)
-				listener.notifyPut(this, value)
-	}
+	def put(value: Option[T]): Unit =
+		if (_weakListenersMap == null)
+			getRequiredTransaction.put(this, Option(value).getOrElse(None))
+		else {
+			import context._
+			transactional(nested) {
+				getRequiredTransaction.put(this, Option(value).getOrElse(None))
+				for (listener <- _weakListenersMap.values)
+					listener.notifyPut(this, value)
+			}
+		}
 
 	private[radon] def notifyRollback =
 		if (_weakListenersMap != null)

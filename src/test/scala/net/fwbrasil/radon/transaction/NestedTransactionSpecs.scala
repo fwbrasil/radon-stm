@@ -33,6 +33,7 @@ class NestedTransactionSpecs extends Specification {
 				ref := 200
 				transactional(nested) {
 					ref := 300
+					!ref must beEqualTo(300)
 					throw new IllegalStateException
 					1
 				} must throwA[IllegalStateException]
