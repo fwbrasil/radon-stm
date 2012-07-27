@@ -4,7 +4,7 @@ import net.fwbrasil.radon.RequiredTransactionException
 import net.fwbrasil.radon.RadonContext
 import net.fwbrasil.radon.ref.Ref
 
-final class NestedTransaction(private[this] val parent: Transaction)(override implicit val context: TransactionContext)
+final class NestedTransaction(val parent: Transaction)(override implicit val context: TransactionContext)
 		extends Transaction()(context) {
 
 	startTimestamp = parent.startTimestamp
