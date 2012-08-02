@@ -59,5 +59,36 @@ class NestedTransactionSpecs extends Specification {
 
 		}
 
+		"use parent isDestroyed flags" in {
+			val ref =
+				transactional {
+					new Ref(100)
+				}
+			transactional {
+				ref := 200
+				transactional(nested) {
+					ref.destroy
+					ref.isDestroyed must beTrue
+				}
+				ref.isDestroyed must beTrue
+			}
+		}
+
+		"use parent isDirty flags" in {
+			val ref =
+				transactional {
+					new Ref(100)
+				}
+			transactional {
+				ref := 200
+				transactional(nested) {
+					ref := 300
+					!ref must beEqualTo(300)
+					ref.isDirty must beTrue
+				}
+				ref.isDirty must beTrue
+			}
+		}
+
 	}
 }

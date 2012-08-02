@@ -23,6 +23,14 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
 		parent.refsSnapshot.putAll(refsSnapshot)
 		clear
 	}
+
+	override private[radon] def isDestroyed[T](ref: Ref[T]): Boolean = {
+		super.isDestroyed(ref) || parent.isDestroyed(ref)
+	}
+
+	override private[radon] def isDirty[T](ref: Ref[T]): Boolean = {
+		super.isDirty(ref) || parent.isDirty(ref)
+	}
 }
 
 class Nested extends Propagation {
