@@ -27,7 +27,7 @@ object RadonStmBuild extends Build {
 	      organization := "net.fwbrasil",
 	      scalaVersion := "2.9.2",
         crossScalaVersions := Seq("2.9.1", "2.9.2"),
-	      version := "1.0-RC3",
+	      version := "1.0-RC4",
 	      resolvers ++= customResolvers
       )
   	)
