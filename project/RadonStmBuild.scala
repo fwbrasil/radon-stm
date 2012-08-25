@@ -5,7 +5,7 @@ object RadonStmBuild extends Build {
   
 	/* Dependencies */
   val junit = "junit" % "junit" % "4.4" % "test"
-	val specs2 = "org.specs2" %% "specs2" % "1.9" % "test"
+	val specs2 = "org.specs2" %% "specs2" % "1.12.1" % "test"
 	val commonsCollections = "commons-collections" % "commons-collections" % "3.2.1"
 	
 	/* Resolvers */
@@ -27,7 +27,7 @@ object RadonStmBuild extends Build {
 	      organization := "net.fwbrasil",
 	      scalaVersion := "2.9.2",
         crossScalaVersions := Seq("2.9.1", "2.9.2"),
-	      version := "1.0-RC4",
+	      version := "1.0-SNAPSHOT",
 	      resolvers ++= customResolvers
       )
   	)
