@@ -109,7 +109,7 @@ It is possible to destroy a Ref and, after that, it can't be read or written:
 	    ref.destroy
 	}
 
-Take a look in  [Sleeping Barber Spec](http://code.google.com/p/radon-stm/source/browse/trunk/radon-stm/src/test/scala/net/fwbrasil/radon/problems/SleepingBarber.scala "Sleeping Barber Spec").
+Take a look in  [Sleeping Barber Spec](https://github.com/fwbrasil/radon-stm/blob/master/src/test/scala/net/fwbrasil/radon/problems/SleepingBarber.scala "Sleeping Barber Spec").
 
 License
 =======
