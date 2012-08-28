@@ -177,7 +177,10 @@ class STMSpecs extends Specification {
 
 		right.start()
 		right.join()
-
+                
+                
+                // SPECS2: simple boolean values you can also be returned at the end of an example
+                // so you can rename error to gotError and return this value directly
 		error must beTrue
 	}
 
@@ -228,7 +231,8 @@ class STMSpecs extends Specification {
 		} catch {
 			case _: RuntimeException => caughtException = true
 		}
-
+                // SPECS2: you can write: 
+                // transactional { throw new RuntimeException("Testing"); 1 } must throwA[RuntimeException] 
 		caughtException mustEqual true
 	}
 
