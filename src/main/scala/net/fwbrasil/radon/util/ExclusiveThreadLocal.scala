@@ -23,7 +23,7 @@ class ExclusiveThreadLocal[T <: ExclusiveThreadLocalItem] {
 	}
 
 	def set(value: Option[T]) = {
-		require(value != null && !value.isDefined)
+		require(value != null && value.isDefined)
 		val currentThread = Thread.currentThread
 		val actualBoundThread = value.get.boundThread
 		if (actualBoundThread != None && currentThread != actualBoundThread.get)
@@ -35,7 +35,7 @@ class ExclusiveThreadLocal[T <: ExclusiveThreadLocalItem] {
 
 	def clean(value: Option[T]) = {
 		underlying.set(None)
-		if (!value.isDefined)
+		if (value.isDefined)
 			value.get.setBoundThread(None)
 	}
 
