@@ -7,7 +7,6 @@ import net.fwbrasil.radon.RetryWithWriteTransactionException
 import net.fwbrasil.radon.ConcurrentTransactionException
 import net.fwbrasil.radon.util.ExclusiveThreadLocal
 import net.fwbrasil.radon.util.Debug
-import net.fwbrasil.radon.util.Statistics
 
 class TransactionManager(implicit val context: TransactionContext) {
 

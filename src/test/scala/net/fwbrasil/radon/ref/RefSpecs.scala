@@ -22,29 +22,25 @@ class RefSpecs extends Specification {
 				val objRef = new Ref[Any]
 				val subSink: Sink[Any] = objRef
 				val superSink: Sink[String] = objRef
-                                // SPECS2: you can write 'ok' or 'success' instead 
-				true must beTrue // tautology
+				ok
 			}
 
 			"set the value when crated" in transactional {
 				val ref = new Ref(100)
 				!ref must beEqualTo(100)
-				// SPECS2: you can also write ref.get must beSome(100)
-				ref.get must beEqualTo(Some(100))
+				ref.get must beSome(100)
 			}
 
 			"set null if is created without a value" in transactional {
 				val ref = new Ref[Int]()
 				!ref must beEqualTo(0)
-				//				ref.get must beNone
 			}
 
 			"set null after is created with a value" in transactional {
 				val ref2 = new Ref(100)
 				ref2.put(None)
 				!ref2 must beEqualTo(0)
-				// SPECS2: you can also write ref2.get must beNone
-				ref2.get must beEqualTo(None)
+				ref2.get must beNone
 			}
 
 			"set the value if it wasn't null" in transactional {
