@@ -29,7 +29,7 @@ class DurableTransactionSpecs extends Specification {
 					t must beEqualTo(transaction)
 					val assignments = t.refsAssignments
 					assignments.size must beEqualTo(1)
-					assignments.head must beEqualTo(ref -> (Some(100), false))
+					assignments.head must beEqualTo(ref, Some(100), false)
 				}
 			transaction.commit
 			true must beTrue
