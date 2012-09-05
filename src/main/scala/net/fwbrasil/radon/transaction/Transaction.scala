@@ -13,10 +13,6 @@ import net.fwbrasil.radon.transaction.time._
 import java.util.IdentityHashMap
 import java.util.HashMap
 
-//class IdentityHashSet[A] extends HashSet[A] {
-//	override def elemHashCode(key: A) = java.lang.System.identityHashCode(key)
-//}
-
 trait TransactionImplicits {
 
 	private[transaction] implicit def toAnyRef[T](ref: Ref[T]) =
@@ -319,7 +315,7 @@ trait TransactionContext extends PropagationContext {
 	def transactional[A](transaction: Option[net.fwbrasil.radon.transaction.Transaction], propagation: Propagation)(f: => A): A = {
 		val activeTransaction = transactionManager.getActiveTransaction
 		if (activeTransaction != None && activeTransaction != transaction)
-			throw new IllegalStateException("There is another transaction active!")
+			throw new IllegalStateException("There is another active transaction!")
 		if (transaction.isDefined)
 			transaction.synchronized {
 				propagation.execute(transaction)(f)(this)
