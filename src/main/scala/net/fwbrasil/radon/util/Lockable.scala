@@ -48,17 +48,15 @@ private[fwbrasil] trait Lockable {
 		try {
 			readLock
 			f
-		} finally {
+		} finally
 			readUnlock
-		}
 
 	private[fwbrasil] def doWithWriteLock[A](f: => A): A =
 		try {
 			writeLock
 			f
-		} finally {
+		} finally
 			writeUnlock
-		}
 }
 
 object Lockable {
