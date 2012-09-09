@@ -56,7 +56,7 @@ class PropagationSpecs extends Specification {
 					new Ref(new Object) must throwA[RequiredTransactionException]
 				}
 			}
-			transaction.refsAssignments.isEmpty must beTrue
+			transaction.assignments.isEmpty must beTrue
 		}
 
 		"run without a transaction" in
@@ -74,7 +74,7 @@ class PropagationSpecs extends Specification {
 						new Ref(new Object)
 					}
 				}
-			transaction.refsAssignments.isEmpty must beTrue
+			transaction.assignments.isEmpty must beTrue
 		}
 
 		"run without a transaction and create a new one" in {
@@ -99,7 +99,7 @@ class PropagationSpecs extends Specification {
 			transactional(transaction, propagation) {
 				new Ref(new Object)
 			}
-		transaction.refsAssignments.head._1 must beEqualTo(ref)
+		transaction.assignments.head._1 must beEqualTo(ref)
 		transaction.commit
 		true must beTrue
 	}

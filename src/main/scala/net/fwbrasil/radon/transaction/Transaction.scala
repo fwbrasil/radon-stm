@@ -74,7 +74,7 @@ trait TransactionValidator {
 	this: Transaction =>
 
 	private[transaction] def validateWrite[T](ref: Ref[T]) =
-		retryIfTrue(isRefRedAfterTheStartOfTransaction(ref) || isRefDestroyedAfterTheStartOfTransaction(ref), ref)
+		retryIfTrue(isRefReadAfterTheStartOfTransaction(ref) || isRefDestroyedAfterTheStartOfTransaction(ref), ref)
 
 	private[transaction] def validateRead[T](ref: Ref[T]) = {
 		val snapshot = getSnapshot(ref)
@@ -92,7 +92,7 @@ trait TransactionValidator {
 	private[transaction] def validateConcurrentRefCreation[T](ref: Ref[T]) =
 		retryIfTrue(isRefCreatingInAnotherTransaction(ref), ref)
 
-	private[this] def isRefRedAfterTheStartOfTransaction[T](ref: Ref[T]) =
+	private[this] def isRefReadAfterTheStartOfTransaction[T](ref: Ref[T]) =
 		ref.refContent.readTimestamp > startTimestamp
 
 	private[this] def isRefCreatingInAnotherTransaction[T](ref: Ref[T]) =
@@ -120,7 +120,9 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	private[transaction] var refsRead = new HashSet[Ref[Any]]()
 	private[transaction] var refsWrite = new HashSet[Ref[Any]]()
 
-	def refsAssignments =
+	def reads =
+		refsRead.toSet
+	def assignments =
 		(for (refWrite <- refsWrite.toList) yield {
 			val snapshot = getSnapshot(refWrite)
 			(refWrite, snapshot.value, snapshot.destroyedFlag)
@@ -288,7 +290,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
 trait TransactionContext extends PropagationContext {
 
-	private[fwbrasil] val transactionManager =
+	protected[fwbrasil] val transactionManager =
 		new TransactionManager()(this)
 
 	private[radon] val transactionClock = new time.TransactionClock

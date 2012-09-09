@@ -27,7 +27,7 @@ class DurableTransactionSpecs extends Specification {
 			ctx.f =
 				(t: Transaction) => {
 					t must beEqualTo(transaction)
-					val assignments = t.refsAssignments
+					val assignments = t.assignments
 					assignments.size must beEqualTo(1)
 					assignments.head must beEqualTo(ref, Some(100), false)
 				}

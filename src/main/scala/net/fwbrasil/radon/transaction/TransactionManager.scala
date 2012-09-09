@@ -57,6 +57,10 @@ class TransactionManager(implicit val context: TransactionContext) {
 	private[radon] def runInNewTransactionWithRetry[A](f: => A): A =
 		runInTransactionWithRetry(new Transaction)(f)
 
+	protected def waitToRetry(e: ConcurrentTransactionException) = {
+		e.refs.foreach((ref) => ref.synchronized(ref.wait(100)))
+	}
+
 	private[radon] def runInTransactionWithRetry[A](transaction: Transaction)(f: => A): A = {
 		var retryCount = 0
 			def retry: A = {
@@ -74,7 +78,7 @@ class TransactionManager(implicit val context: TransactionContext) {
 					result
 				} catch {
 					case e: ConcurrentTransactionException =>
-						e.refs.foreach((ref) => ref.synchronized(ref.wait(100)))
+						waitToRetry(e)
 						transaction.isRetryWithWrite = e.retryWithWrite
 						retry
 				}
