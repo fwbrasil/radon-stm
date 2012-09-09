@@ -27,15 +27,13 @@ class DurableTransactionSpecs extends Specification {
 			ctx.f =
 				(t: Transaction) => {
 					t must beEqualTo(transaction)
-					val assignments = t.assignments
-					assignments.size must beEqualTo(1)
-					assignments.head must beEqualTo(ref, Some(100), false)
+					t.assignments must beEqualTo(List(ref, Some(100), false))
 				}
 			transaction.commit
 			true must beTrue
 		}
 
-		"don't make durable transient writes" in {
+		"do not make durable transient writes" in {
 			val ctx = new DurableTestContext
 			import ctx._
 			val transaction = new Transaction(true)
