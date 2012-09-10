@@ -27,7 +27,7 @@ class DurableTransactionSpecs extends Specification {
 			ctx.f =
 				(t: Transaction) => {
 					t must beEqualTo(transaction)
-					t.assignments must beEqualTo(List(ref, Some(100), false))
+					t.assignments must beEqualTo(List((ref, Some(100), false)))
 				}
 			transaction.commit
 			true must beTrue
