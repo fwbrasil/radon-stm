@@ -173,7 +173,10 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 		refsWrite.contains(ref)
 	}
 
-	def commit(): Unit = {
+	def commit(): Unit =
+		commit(rollback = false)
+
+	private def commit(rollback: Boolean): Unit = {
 		try {
 			val refsReadWithoutWrite = refsRead -- refsWrite
 			val (readLockeds, readUnlockeds) = lockall(refsReadWithoutWrite, _.tryReadLock)
@@ -201,7 +204,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 							validateWrite(e)
 						})
 
-						if (!transient)
+						if (!transient && !rollback)
 							context.makeDurable(this)
 					} catch {
 						case e =>
@@ -272,7 +275,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
 	def rollback() = {
 		prepareRollback
-		commit
+		commit(rollback = true)
 	}
 
 	private[this] def clearValues = {
