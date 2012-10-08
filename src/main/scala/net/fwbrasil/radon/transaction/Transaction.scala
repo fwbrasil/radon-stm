@@ -266,7 +266,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 		val refsWrote = refsWrite
 		val refsCreated =
 			refsWrote.filter(_.creationTransaction == this)
-		clearValues
+		clear
 		for (ref <- refsCreated)
 			destroy(ref)
 		for (ref <- refsWrote)
@@ -278,14 +278,10 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 		commit(rollback = true)
 	}
 
-	private[this] def clearValues = {
+	private[transaction] def clear = {
 		refsRead = new HashSet[Ref[Any]]()
 		refsWrite = new HashSet[Ref[Any]]()
 		clearSnapshots
-	}
-
-	private[transaction] def clear = {
-		clearValues
 		clearStopWatch
 	}
 

@@ -68,7 +68,7 @@ class DurableTransactionSpecs extends Specification {
 			}
 			ok
 		}
-		"do not make durable roolback" in {
+		"do not make durable rollback" in {
 			val ctx = new DurableTestContext
 			import ctx._
 			val transaction = new Transaction
@@ -81,6 +81,29 @@ class DurableTransactionSpecs extends Specification {
 					throw new IllegalStateException("should not get here.")
 				}
 			transaction.rollback
+			ctx.f = (t: Transaction) => {}
+			transactional {
+				ref.isDestroyed must beTrue
+			}
+			ok
+		}
+		"do not make durable rollback if an error occurs at nested transaction inside makeDurable" in {
+			val ctx = new DurableTestContext
+			import ctx._
+			val transaction = new Transaction
+			val ref =
+				transactional(transaction) {
+					new Ref(100)
+				}
+			ctx.f =
+				(t: Transaction) => {
+					transactional(t) {
+						transactional(t, nested) {
+							throw new IllegalStateException
+						}
+					}
+				}
+			transaction.commit must throwA[IllegalStateException]
 			ctx.f = (t: Transaction) => {}
 			transactional {
 				ref.isDestroyed must beTrue
