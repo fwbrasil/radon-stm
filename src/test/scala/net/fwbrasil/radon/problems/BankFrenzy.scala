@@ -39,30 +39,18 @@ class BankFrenzy extends Specification {
 
 			val people =
 				transactional {
-					for (i <- 0 until 1)
+					for (i <- 0 until 1000)
 						yield new Account(100)
 				}
 
 			val market = List(business1, business2, business3, fees) ++ people.toList
 			var running = true
 
-			val secActor = thread {
-				while (running) {
-					val total = transactional {
-						sum(market)
-					}
-					println("Market value: $" + total)
-
-					sleep(10)
-				}
-			}
-
 			val businessActor = thread {
 				while (running) {
 					transactional {
 						transfer(250, business1, business2) // transfer rent
 					}
-
 					sleep(200)
 				}
 			}
@@ -76,9 +64,17 @@ class BankFrenzy extends Specification {
 				transactional(transfer(i * 3, business2, p)) // refund from business2
 			}
 
-			println("Starting market value: $" + transactional(sum(market)))
+				def marketValue = transactional(sum(market))
+
+			val startValue = marketValue
 
 			businessActor.start()
+			val secActor = thread {
+				while (running) {
+					marketValue mustEqual startValue
+					sleep(10)
+				}
+			}
 			secActor.start()
 
 			for (pa <- peopleActors) pa.start()
@@ -88,8 +84,8 @@ class BankFrenzy extends Specification {
 			businessActor.join()
 			secActor.join()
 
-			println("Total fees: $" + transactional(!fees))
-			println("Final market value: $" + transactional(sum(market)))
+			marketValue mustEqual startValue
+			transactional(!log.size > people.size * 3) must beTrue
 
 			true must beTrue
 
@@ -104,7 +100,6 @@ class BankFrenzy extends Specification {
 		from := from - amount
 		to := to + (amount - less)
 		fees := fees + less
-		println("transfer")
 	}
 
 	def thread(f: => Unit) = new Thread {

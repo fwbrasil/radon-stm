@@ -10,7 +10,7 @@ trait TransactionStopWatch {
 	private[fwbrasil] var endTimestamp = Long.MaxValue
 
 	def startIfNotStarted() =
-		if (startTimestamp == 0)
+		if (startTimestamp == 0l)
 			start
 
 	private[transaction] def start =

@@ -18,8 +18,8 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
 	}
 
 	override def commit(): Unit = {
-		parent.refsRead ++= refsRead
-		parent.refsWrite ++= refsWrite
+		parent.refsRead.addAll(refsRead)
+		parent.refsWrite.addAll(refsWrite)
 		parent.refsSnapshot.putAll(refsSnapshot)
 		clear
 	}

@@ -12,58 +12,57 @@ import net.fwbrasil.radon.util.Lockable._
 import net.fwbrasil.radon.transaction.time._
 import java.util.IdentityHashMap
 import java.util.HashMap
-
-trait TransactionImplicits {
-
-	private[transaction] implicit def toAnyRef[T](ref: Ref[T]) =
-		ref.asInstanceOf[Ref[Any]]
-
-	private[transaction] implicit def toAnyRefContent[T](refContent: RefContent[T]) =
-		refContent.asInstanceOf[RefContent[Any]]
-}
+import java.util.{ HashSet => JHashSet }
 
 trait RefSnapshooter {
-	this: TransactionImplicits with TransactionStopWatch =>
+	this: Transaction =>
 
 	private[transaction] var refsSnapshot = new IdentityHashMap[Ref[Any], RefContent[Any]]()
 
-	private[transaction] def isAValidSnapshot[T](snapshot: RefContent[T]) =
+	private[transaction] def isAValidSnapshot(snapshot: RefContent[Any]) =
 		snapshot.writeTimestamp < startTimestamp
 
-	private[transaction] def isAnOutdatedSnapshot[T](ref: Ref[T], snapshot: RefContent[T]) =
+	private[transaction] def isAnOutdatedSnapshot(ref: Ref[Any], snapshot: RefContent[Any]) =
 		(snapshot.writeTimestamp != ref.refContent.writeTimestamp
 			&& snapshot.readTimestamp != ref.refContent.readTimestamp)
 
-	private[transaction] def hasDestroyedFlag[T](ref: Ref[T]) =
-		ref.refContent.destroyedFlag || {
-			val snapshot = refsSnapshot.get(ref)
+	private[transaction] def hasDestroyedFlag(ref: Ref[Any], snapshot: RefContent[Any]): Boolean =
+		ref.refContent.destroyedFlag ||
 			(snapshot != null && snapshot.destroyedFlag)
-		}
 
-	private[transaction] def snapshot[T](ref: Ref[T]) = {
+	private[transaction] def snapshot(ref: Ref[Any]) = {
 		val snap = refsSnapshot.get(ref)
+		validateIfDestroyed(ref, snap)
 		if (snap == null) {
-			refsSnapshot.put(toAnyRef(ref), ref.refContent)
+			refsSnapshot.put(ref, ref.refContent)
 			ref.refContent
 		} else
 			snap
 	}
 
-	private[transaction] def snapshot[T](ref: Ref[T], detroyed: Boolean): Unit = {
+	private[transaction] def snapshot(ref: Ref[Any], detroyed: Boolean): Unit = {
+		val snap = refsSnapshot.get(ref)
+		validateIfDestroyed(ref, snap)
 		val oldContent =
-			Option(refsSnapshot.get(ref)).getOrElse(ref.refContent)
+			Option(snap).getOrElse(ref.refContent)
 		val newContents = new RefContent(oldContent.value, oldContent.readTimestamp, oldContent.writeTimestamp, detroyed)
-		refsSnapshot.put(toAnyRef(ref), newContents)
+		refsSnapshot.put(ref, newContents)
 	}
 
-	private[transaction] def snapshot[T](ref: Ref[T], value: Option[T]): Unit = {
+	private[transaction] def snapshot(ref: Ref[Any], value: Option[Any]): Unit = {
+		val snap = refsSnapshot.get(ref)
+		validateIfDestroyed(ref, snap)
 		val oldContent =
-			Option(refsSnapshot.get(ref)).getOrElse(ref.refContent)
+			Option(snap).getOrElse(ref.refContent)
 		val newContents = new RefContent(value, oldContent.readTimestamp, oldContent.writeTimestamp, false)
-		refsSnapshot.put(toAnyRef(ref), newContents)
+		refsSnapshot.put(ref, newContents)
 	}
 
-	private[transaction] def getSnapshot[T](ref: Ref[T]) =
+	private def validateIfDestroyed(ref: Ref[Any], snapshot: RefContent[Any]) =
+		if (hasDestroyedFlag(ref, snapshot))
+			throw new IllegalStateException("Triyng to access a destroyed ref.")
+
+	private[transaction] def getSnapshot(ref: Ref[Any]) =
 		refsSnapshot.get(ref)
 
 	private[transaction] def clearSnapshots =
@@ -73,41 +72,36 @@ trait RefSnapshooter {
 trait TransactionValidator {
 	this: Transaction =>
 
-	private[transaction] def validateWrite[T](ref: Ref[T]) =
+	private[transaction] def validateWrite(ref: Ref[Any]) =
 		retryIfTrue(isRefReadAfterTheStartOfTransaction(ref) || isRefDestroyedAfterTheStartOfTransaction(ref), ref)
 
-	private[transaction] def validateRead[T](ref: Ref[T]) = {
+	private[transaction] def validateRead(ref: Ref[Any]) = {
 		val snapshot = getSnapshot(ref)
 		retryIfTrue((isRefWroteAfterTheStartOfTransaction(ref) || isAnOutdatedSnapshot(ref, snapshot)) && !(isReadOnly && isAValidSnapshot(snapshot)), ref)
 	}
 
-	private[transaction] def validateIfIsDestroyed[T](ref: Ref[T]) =
-		if (hasDestroyedFlag(ref))
-			throw new IllegalStateException("Trying to access a destroyed ref.")
-
-	private[transaction] def validateContext[T](ref: Ref[T]) =
+	private[transaction] def validateContext(ref: Ref[Any]) =
 		if (ref.context != context)
 			throw new IllegalStateException("Ref is from another context!")
 
-	private[transaction] def validateConcurrentRefCreation[T](ref: Ref[T]) =
+	private[transaction] def validateConcurrentRefCreation(ref: Ref[Any]) =
 		retryIfTrue(isRefCreatingInAnotherTransaction(ref), ref)
 
-	private[this] def isRefReadAfterTheStartOfTransaction[T](ref: Ref[T]) =
+	private[this] def isRefReadAfterTheStartOfTransaction(ref: Ref[Any]) =
 		ref.refContent.readTimestamp > startTimestamp
 
-	private[this] def isRefCreatingInAnotherTransaction[T](ref: Ref[T]) =
+	private[this] def isRefCreatingInAnotherTransaction(ref: Ref[Any]) =
 		ref.creationTransaction != this && ref.isCreating
 
-	private[this] def isRefWroteAfterTheStartOfTransaction[T](ref: Ref[T]) =
+	private[this] def isRefWroteAfterTheStartOfTransaction(ref: Ref[Any]) =
 		ref.refContent.writeTimestamp > startTimestamp
 
-	private[this] def isRefDestroyedAfterTheStartOfTransaction[T](ref: Ref[T]) =
+	private[this] def isRefDestroyedAfterTheStartOfTransaction(ref: Ref[Any]) =
 		isRefWroteAfterTheStartOfTransaction(ref) && ref.destroyedFlag
 }
 
 class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
-		extends TransactionImplicits
-		with TransactionStopWatch
+		extends TransactionStopWatch
 		with RefSnapshooter
 		with TransactionValidator
 		with ExclusiveThreadLocalItem {
@@ -117,22 +111,26 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	import context._
 
 	private[radon] var isRetryWithWrite = false
-	private[transaction] var refsRead = new HashSet[Ref[Any]]()
-	private[transaction] var refsWrite = new HashSet[Ref[Any]]()
+	private[transaction] var refsRead = new JHashSet[Ref[Any]]()
+	private[transaction] var refsWrite = new JHashSet[Ref[Any]]()
 
-	def reads =
+	def reads = {
+		import scala.collection.JavaConversions._
 		refsRead.toSet
-	def assignments =
-		(for (refWrite <- refsWrite.toList) yield {
+	}
+	def assignments = {
+		import scala.collection.JavaConversions._
+		for (refWrite <- refsWrite.toList) yield {
 			val snapshot = getSnapshot(refWrite)
 			(refWrite, snapshot.value, snapshot.destroyedFlag)
-		}).toList
+		}
+	}
 
 	private[transaction] def isReadOnly =
 		!isRetryWithWrite && refsWrite.isEmpty
 
 	private[this] def isWrite =
-		refsWrite.nonEmpty
+		!refsWrite.isEmpty
 
 	private[this] def isWriteOnly =
 		isWrite && refsRead.isEmpty
@@ -142,41 +140,44 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 			retry(refs: _*)
 
 	private[radon] def put[T](ref: Ref[T], value: Option[T]) = {
+		val anyRef = ref.asInstanceOf[Ref[Any]]
 		startIfNotStarted
-		validateIfIsDestroyed(ref)
-		snapshot(ref, value)
-		refsWrite += ref
+		snapshot(anyRef, value)
+		refsWrite.add(anyRef)
 	}
 
 	private[radon] def get[T](ref: Ref[T]): Option[T] = {
+		val anyRef = ref.asInstanceOf[Ref[Any]]
 		startIfNotStarted
-		validateIfIsDestroyed(ref)
-		val result = snapshot(ref)
-		refsRead += ref
+		val result = snapshot(anyRef)
+		refsRead.add(anyRef)
 		result.value.asInstanceOf[Option[T]]
 	}
 
 	private[radon] def destroy[T](ref: Ref[T]): Unit = {
+		val anyRef = ref.asInstanceOf[Ref[Any]]
 		startIfNotStarted
-		validateIfIsDestroyed(ref)
-		snapshot(ref, true)
-		refsWrite += ref
+		snapshot(anyRef, true)
+		refsWrite.add(anyRef)
 	}
 
 	private[radon] def isDestroyed[T](ref: Ref[T]): Boolean = {
+		val anyRef = ref.asInstanceOf[Ref[Any]]
 		startIfNotStarted
-		hasDestroyedFlag(ref)
+		hasDestroyedFlag(anyRef, getSnapshot(anyRef))
 	}
 
 	private[radon] def isDirty[T](ref: Ref[T]): Boolean = {
+		val anyRef = ref.asInstanceOf[Ref[Any]]
 		startIfNotStarted
-		refsWrite.contains(ref)
+		refsWrite.contains(anyRef)
 	}
 
 	def commit(): Unit =
 		commit(rollback = false)
 
 	private def commit(rollback: Boolean): Unit = {
+		import scala.collection.JavaConversions._
 		try {
 			val refsReadWithoutWrite = refsRead -- refsWrite
 			val (readLockeds, readUnlockeds) = lockall(refsReadWithoutWrite, _.tryReadLock)
@@ -231,7 +232,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 			clear
 	}
 
-	private[this] def setRefContent(ref: Ref[_], isRefWrite: Boolean, isRefRead: Boolean) =
+	private[this] def setRefContent(ref: Ref[Any], isRefWrite: Boolean, isRefRead: Boolean) =
 		if (!transient) ref.synchronized {
 			val refContent = ref.refContent
 			val newRefContent =
@@ -244,7 +245,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 			ref.setRefContent(newRefContent.value, read, write, newRefContent.destroyedFlag)
 		}
 
-	private[this] def valueAndDestroyedFlag(ref: Ref[_], isRefWrite: Boolean, isRefRead: Boolean, refContent: RefContent[_]) =
+	private[this] def valueAndDestroyedFlag(ref: Ref[Any], isRefWrite: Boolean, isRefRead: Boolean, refContent: RefContent[_]) =
 		if (isRefWrite && refContent.writeTimestamp < startTimestamp)
 			getSnapshot(ref)
 		else
@@ -263,6 +264,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 			refContent.writeTimestamp
 
 	def prepareRollback = {
+		import scala.collection.JavaConversions._
 		val refsWrote = refsWrite
 		val refsCreated =
 			refsWrote.filter(_.creationTransaction == this)
@@ -279,8 +281,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	}
 
 	private[transaction] def clear = {
-		refsRead = new HashSet[Ref[Any]]()
-		refsWrite = new HashSet[Ref[Any]]()
+		refsRead = new JHashSet[Ref[Any]]()
+		refsWrite = new JHashSet[Ref[Any]]()
 		clearSnapshots
 		clearStopWatch
 	}
