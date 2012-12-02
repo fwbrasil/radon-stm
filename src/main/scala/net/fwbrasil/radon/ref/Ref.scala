@@ -96,7 +96,8 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 		result
 	}
 
-	def put(value: Option[T]): Unit =
+	def put(pValue: Option[T]): Unit = {
+		val value = if (pValue == null) None else pValue
 		if (_weakListenersMap == null)
 			getRequiredTransaction.put(this, Option(value).getOrElse(None))
 		else {
@@ -107,6 +108,7 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 					listener.notifyPut(this, value)
 			}
 		}
+	}
 
 	private[radon] def notifyRollback =
 		if (_weakListenersMap != null)
