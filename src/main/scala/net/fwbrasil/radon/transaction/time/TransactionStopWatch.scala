@@ -2,7 +2,7 @@ package net.fwbrasil.radon.transaction.time
 
 import net.fwbrasil.radon.transaction.TransactionContext
 
-trait TransactionStopWatch {
+abstract class TransactionStopWatch {
 
 	private[transaction] implicit val context: TransactionContext
 
