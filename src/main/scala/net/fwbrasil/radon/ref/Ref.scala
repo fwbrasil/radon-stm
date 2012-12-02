@@ -99,11 +99,11 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	def put(pValue: Option[T]): Unit = {
 		val value = if (pValue == null) None else pValue
 		if (_weakListenersMap == null)
-			getRequiredTransaction.put(this, Option(value).getOrElse(None))
+			getRequiredTransaction.put(this, value)
 		else {
 			import context._
 			transactional(nested) {
-				getRequiredTransaction.put(this, Option(value).getOrElse(None))
+				getRequiredTransaction.put(this, value)
 				for (listener <- _weakListenersMap.values)
 					listener.notifyPut(this, value)
 			}

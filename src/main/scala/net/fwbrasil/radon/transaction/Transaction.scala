@@ -44,7 +44,7 @@ trait RefSnapshooter {
 		val snap = refsSnapshot.get(ref)
 		validateIfDestroyed(ref, snap)
 		val oldContent =
-			Option(snap).getOrElse(ref.refContent)
+			if (snap != null) snap else ref.refContent
 		val newContents = new RefContent(oldContent.value, oldContent.readTimestamp, oldContent.writeTimestamp, detroyed)
 		refsSnapshot.put(ref, newContents)
 	}
@@ -53,7 +53,7 @@ trait RefSnapshooter {
 		val snap = refsSnapshot.get(ref)
 		validateIfDestroyed(ref, snap)
 		val oldContent =
-			Option(snap).getOrElse(ref.refContent)
+			if (snap != null) snap else ref.refContent
 		val newContents = new RefContent(value, oldContent.readTimestamp, oldContent.writeTimestamp, false)
 		refsSnapshot.put(ref, newContents)
 	}
