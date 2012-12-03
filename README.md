@@ -6,7 +6,7 @@ Introduction
 RadonSTM is a timestamp based Software Transaction Memory ([STM](http://en.wikipedia.org/wiki/Software_transactional_memory "STM")) implementation in Scala.
 The main framework objective is providing a simple and flexible way to deal with concurrency. STM is a wide known solution implemented in many languages.
 
-This project was initially  based on [Daniel Spiewalk STM](http://www.codecommit.com/blog/scala/improving-the-stm-multi-version-concurrency-control "Daniel Spiewalk STM") implementation and grew up focused on providing the basis for Activate Persistence Framework.
+This project was initially  based on [Daniel Spiewak STM](http://www.codecommit.com/blog/scala/improving-the-stm-multi-version-concurrency-control "Daniel Spiewalk STM") implementation and grew up focused on providing the basis for Activate Persistence Framework.
 
 Radon has features like propagation control, nested transactions and ref destroying.
 
