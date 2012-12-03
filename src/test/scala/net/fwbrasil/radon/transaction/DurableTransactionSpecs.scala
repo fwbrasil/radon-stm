@@ -83,7 +83,8 @@ class DurableTransactionSpecs extends Specification {
 			transaction.rollback
 			ctx.f = (t: Transaction) => {}
 			transactional {
-				ref.isDestroyed must beTrue
+				val destroyed = ref.isDestroyed
+				destroyed must beTrue
 			}
 			ok
 		}

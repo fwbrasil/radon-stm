@@ -4,7 +4,7 @@ import net.fwbrasil.radon.TestRadonContext._
 
 object PerformanceTest extends App {
 
-	val num = 100000
+	val num = 1
 
 	def create =
 		transactional {
@@ -12,6 +12,17 @@ object PerformanceTest extends App {
 				yield new Ref(i)
 		}
 
-	create
+	def modify(refs: Seq[Ref[Int]]) =
+		transactional {
+			refs.foreach(ref => ref := !ref + 1)
+		}
 
+	val refs = create
+	modify(refs)
+
+}
+
+object SimpleMain extends App {
+	val ref = transactional(new Ref(0))
+	transactional(ref := !ref + 1)
 }

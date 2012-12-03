@@ -147,12 +147,11 @@ object Ref {
 	def apply[T](implicit context: TransactionContext) = new Ref
 }
 
-class RefContent[T](
-	val value: Option[T],
-	val readTimestamp: Long,
-	val writeTimestamp: Long,
-	val destroyedFlag: Boolean)
-		extends Serializable
+case class RefContent[T](
+	value: Option[T],
+	readTimestamp: Long,
+	writeTimestamp: Long,
+	destroyedFlag: Boolean)
 
 trait RefContext {
 

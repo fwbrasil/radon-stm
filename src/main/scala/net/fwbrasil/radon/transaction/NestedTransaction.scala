@@ -11,15 +11,13 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
 	endTimestamp = parent.endTimestamp
 
 	override def get[T](ref: Ref[T]): Option[T] = {
-		if (refsWrite.contains(ref))
+		if (super.isDirty(ref))
 			super.get(ref)
 		else
 			parent.get(ref)
 	}
 
 	override def commit(): Unit = {
-		parent.refsRead.addAll(refsRead)
-		parent.refsWrite.addAll(refsWrite)
 		parent.refsSnapshot.putAll(refsSnapshot)
 		clear
 	}

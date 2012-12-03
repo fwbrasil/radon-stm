@@ -85,7 +85,11 @@ class BankFrenzy extends Specification {
 			secActor.join()
 
 			marketValue mustEqual startValue
-			transactional(!log.size > people.size * 3) must beTrue
+			transactional {
+				val logSize = !log.size
+				val minExcpected = people.size * 3
+				logSize > minExcpected
+			} must beTrue
 
 			true must beTrue
 
