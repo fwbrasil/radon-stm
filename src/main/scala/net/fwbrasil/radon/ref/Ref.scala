@@ -62,13 +62,10 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	def getTransaction =
 		getActiveTransaction
 
-	put(pValueOption)
+	put(pValueOption, getRequiredTransaction)
 
 	private[fwbrasil] def refContent =
 		_refContent
-
-	private[fwbrasil] def setRefContent(value: Option[T]): Unit =
-		setRefContent(value, readTimestamp, writeTimestamp, destroyedFlag)
 
 	private[fwbrasil] def setRefContent(pValue: Option[T], pReadTimestamp: Long, pWriteTimestamp: Long, pDestroyedFlag: Boolean): Unit = {
 		if (_weakListenersMap != null)
@@ -76,9 +73,6 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 				listener.notifyCommit(this)
 		_refContent = new RefContent[T](pValue, pReadTimestamp, pWriteTimestamp, pDestroyedFlag)
 	}
-
-	private[fwbrasil] def destroyInternal =
-		setRefContent(None, readTimestamp, writeTimestamp, true)
 
 	private[radon] def readTimestamp = refContent.readTimestamp
 	private[radon] def writeTimestamp = refContent.writeTimestamp
@@ -96,10 +90,10 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 		result
 	}
 
-	def put(pValue: Option[T]): Unit = {
+	def put(pValue: Option[T], pTransaction: Transaction): Unit = {
 		val value = if (pValue == null) None else pValue
 		if (_weakListenersMap == null)
-			getRequiredTransaction.put(this, value)
+			pTransaction.put(this, value)
 		else {
 			import context._
 			transactional(nested) {
@@ -109,6 +103,9 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 			}
 		}
 	}
+
+	def put(pValue: Option[T]): Unit =
+		put(pValue, getRequiredTransaction)
 
 	private[radon] def notifyRollback =
 		if (_weakListenersMap != null)
