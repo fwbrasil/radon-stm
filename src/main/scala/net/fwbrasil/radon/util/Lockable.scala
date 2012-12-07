@@ -60,7 +60,7 @@ private[fwbrasil] trait Lockable {
 }
 
 object Lockable {
-	def lockall[L <% Lockable](lockables: Set[L], lockFunc: (Lockable) => Boolean) = {
+	def lockall[L <% Lockable](lockables: Iterable[L], lockFunc: (Lockable) => Boolean) = {
 		val locked = ListBuffer[L]()
 		val unlocked = ListBuffer[L]()
 		for (lockable <- lockables)

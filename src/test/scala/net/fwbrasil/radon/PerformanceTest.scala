@@ -4,7 +4,7 @@ import net.fwbrasil.radon.TestRadonContext._
 
 object PerformanceTest extends App {
 
-	val num = 1
+	val num = 100000
 
 	def create =
 		transactional {

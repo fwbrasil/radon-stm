@@ -12,6 +12,7 @@ import net.fwbrasil.radon.transaction.time._
 import java.util.IdentityHashMap
 import java.util.HashMap
 import java.util.{ HashSet => JHashSet }
+import scala.collection.mutable.ListBuffer
 
 class RefSnapshot(val ref: Ref[Any]) {
 	val originalContent = ref.refContent
@@ -123,14 +124,16 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
 	private[radon] var isRetryWithWrite = false
 
-	private var refsRead = Set[Ref[Any]]()
-	private var refsWrite = Set[Ref[Any]]()
+	private var refsRead = List[Ref[Any]]()
+	private var refsReadOnly = List[Ref[Any]]()
+	private var refsWrite = List[Ref[Any]]()
+	private var snapshots = List[RefSnapshot]()
 
 	def reads =
 		refsRead
 
 	def assignments =
-		for (refWrite <- refsWrite.toList) yield {
+		for (refWrite <- refsWrite) yield {
 			val snapshot = getSnapshot(refWrite)
 			(refWrite, snapshot.value, snapshot.destroyedFlag)
 		}
@@ -168,23 +171,30 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
 	private def updateReadsAndWrites = {
 		import scala.collection.JavaConversions._
-		val refsRead = new JHashSet[Ref[Any]]
-		val refsWrite = new JHashSet[Ref[Any]]
-		for (snapshot <- refsSnapshot.values) {
-			if (snapshot.isRead)
-				refsRead.add(snapshot.ref)
+		val refsRead = ListBuffer[Ref[Any]]()
+		val refsReadOnly = ListBuffer[Ref[Any]]()
+		val refsWrite = ListBuffer[Ref[Any]]()
+		val snapshots = refsSnapshot.values.toList
+		for (snapshot <- snapshots) {
+			val ref = snapshot.ref
+			if (snapshot.isRead) {
+				refsRead += ref
+				if (!snapshot.isWrite)
+					refsReadOnly += ref
+			}
 			if (snapshot.isWrite)
-				refsWrite.add(snapshot.ref)
+				refsWrite += ref
 		}
-		this.refsRead = refsRead.toSet
-		this.refsWrite = refsWrite.toSet
+		this.refsRead = refsRead.toList
+		this.refsReadOnly = refsReadOnly.toList
+		this.refsWrite = refsWrite.toList
+		this.snapshots = snapshots
 	}
 
 	private def commit(rollback: Boolean): Unit = {
 		updateReadsAndWrites
 		try {
-			val refsReadWithoutWrite = refsRead -- refsWrite
-			val (readLockeds, readUnlockeds) = lockall(refsReadWithoutWrite, _.tryReadLock)
+			val (readLockeds, readUnlockeds) = lockall(refsReadOnly, _.tryReadLock)
 			try {
 				val (writeLockeds, writeUnlockeds) = lockall(refsWrite, _.tryWriteLock)
 				try {
@@ -196,12 +206,12 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 						retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds.toSeq: _*)
 						retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
 
-						refsReadWithoutWrite.foreach(e => {
+						refsReadOnly.foreach(e => {
 							validateContext(e)
 							validateConcurrentRefCreation(e)
 						})
 
-						reads.foreach(validateRead)
+						refsRead.foreach(validateRead)
 
 						refsWrite.foreach(e => {
 							validateContext(e)
@@ -215,15 +225,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 						case e =>
 							prepareRollback
 							throw e
-					} finally {
-
-						for (ref <- refsReadWithoutWrite)
-							setRefContent(ref, false, true)
-
-						for (ref <- refsWrite)
-							setRefContent(ref, true, reads.contains(ref))
-
-					}
+					} finally
+						snapshots.foreach(setRefContent)
 				} finally {
 					writeLockeds.foreach(_.writeUnlock)
 					writeLockeds.foreach((ref) => ref.synchronized(ref.notify))
@@ -236,31 +239,24 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 			clear
 	}
 
-	private[this] def setRefContent(ref: Ref[Any], isRefWrite: Boolean, isRefRead: Boolean) =
-		if (!transient)
-			syncronizeIfIsNotRefWrite(isRefWrite, ref) {
-				val refContent = ref.refContent
-				val (value, destroyedFlag) =
-					valueAndDestroyedFlag(ref, isRefWrite, refContent)
-				val read =
-					readTimestamp(isRefRead, ref.refContent)
-				val write =
-					writeTimestamp(isRefWrite, ref.refContent)
-				require(ref.creationTransaction != this || write != 0)
-				ref.setRefContent(value, read, write, destroyedFlag)
-			}
+	private[this] def setRefContent(snapshot: RefSnapshot) =
+		if (!transient) {
+			val ref = snapshot.ref
+			val refContent = ref.refContent
+			val (value, destroyedFlag) =
+				valueAndDestroyedFlag(snapshot, refContent)
+			val read =
+				readTimestamp(snapshot.isRead, refContent)
+			val write =
+				writeTimestamp(snapshot.isWrite, refContent)
+			require(ref.creationTransaction != this || write != 0)
+			ref.setRefContent(value, read, write, destroyedFlag)
+		}
 
-	private[this] def syncronizeIfIsNotRefWrite[A](isRefWrite: Boolean, ref: Ref[Any])(f: => A) =
-		if (isRefWrite)
-			ref.synchronized(f)
-		else
-			f
-
-	private[this] def valueAndDestroyedFlag(ref: Ref[Any], isRefWrite: Boolean, refContent: RefContent[_]) =
-		if (isRefWrite && refContent.writeTimestamp < startTimestamp) {
-			val snapshot = getSnapshot(ref, false)
+	private[this] def valueAndDestroyedFlag(snapshot: RefSnapshot, refContent: RefContent[_]) =
+		if (snapshot.isWrite && refContent.writeTimestamp < startTimestamp)
 			(snapshot.value, snapshot.destroyedFlag)
-		} else
+		else
 			(refContent.value, refContent.destroyedFlag)
 
 	private[this] def readTimestamp(isRefRead: Boolean, refContent: RefContent[_]) =
@@ -294,8 +290,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	}
 
 	private[transaction] def clear = {
-		refsRead = Set()
-		refsWrite = Set()
+		refsRead = List()
+		refsWrite = List()
 		clearSnapshots
 		clearStopWatch
 	}
