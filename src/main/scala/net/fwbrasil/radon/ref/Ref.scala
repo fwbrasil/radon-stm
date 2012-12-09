@@ -32,13 +32,14 @@ trait RefListener[T] {
 	}
 }
 
-class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
+class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context: TransactionContext)
 		extends Source[T] with Sink[T] with Lockable with java.io.Serializable {
 
 	import context.transactionManager._
 
-	def this(pValue: T)(implicit context: TransactionContext) = this(Option(pValue))
-	def this()(implicit context: TransactionContext) = this(None)
+	def this(pValue: T)(implicit context: TransactionContext) = this(Option(pValue), true)
+	def this(pValueOption: Option[T])(implicit context: TransactionContext) = this(pValueOption, true)
+	def this()(implicit context: TransactionContext) = this(None, true)
 
 	private[this] var _refContent: RefContent[T] = new RefContent(None, 0l, 0l, false)
 
@@ -62,10 +63,19 @@ class Ref[T](pValueOption: Option[T])(implicit val context: TransactionContext)
 	def getTransaction =
 		getActiveTransaction
 
-	put(pValueOption, getRequiredTransaction)
+	if (initialize)
+		put(pValueOption, getRequiredTransaction)
 
 	private[fwbrasil] def refContent =
 		_refContent
+
+	private[fwbrasil] def setRefContent(pValue: Option[T]): Unit = {
+		val content = this.refContent
+		setRefContent(pValue, content.readTimestamp, content.writeTimestamp, content.destroyedFlag)
+	}
+
+	private[fwbrasil] def destroyInternal =
+		setRefContent(None, readTimestamp, writeTimestamp, true)
 
 	private[fwbrasil] def setRefContent(pValue: Option[T], pReadTimestamp: Long, pWriteTimestamp: Long, pDestroyedFlag: Boolean): Unit = {
 		if (_weakListenersMap != null)

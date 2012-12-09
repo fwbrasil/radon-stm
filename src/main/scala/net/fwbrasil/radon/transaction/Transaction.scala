@@ -88,7 +88,7 @@ trait TransactionValidator {
 		retryIfTrue(isRefReadAfterTheStartOfTransaction(ref) || isRefDestroyedAfterTheStartOfTransaction(ref), ref)
 
 	private[transaction] def validateRead(ref: Ref[Any]) = {
-		val snapshot = getSnapshot(ref)
+		val snapshot = getSnapshot(ref, false)
 		retryIfTrue((isRefWroteAfterTheStartOfTransaction(ref) || isAnOutdatedSnapshot(ref, snapshot)) && !(isReadOnly && isAValidSnapshot(snapshot)), ref)
 	}
 
@@ -133,10 +133,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 		refsRead
 
 	def assignments =
-		for (refWrite <- refsWrite) yield {
-			val snapshot = getSnapshot(refWrite)
-			(refWrite, snapshot.value, snapshot.destroyedFlag)
-		}
+		for (snapshot <- snapshots) yield (snapshot.ref, snapshot.value, snapshot.destroyedFlag)
 
 	private[transaction] def isReadOnly =
 		!isRetryWithWrite && refsWrite.isEmpty
