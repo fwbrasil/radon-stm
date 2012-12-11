@@ -156,16 +156,13 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	}
 
 	private[radon] def isDestroyed[T](ref: Ref[T]): Boolean = {
-		startIfNotStarted
-		val snap = getSnapshot(ref.asInstanceOf[Ref[Any]], false)
-		snap.isRead = true
-		snap.destroyedFlag
+		lazy val snap = refsSnapshot.get(ref)
+		ref.refContent.destroyedFlag || (snap != null && snap.destroyedFlag)
 	}
 
 	private[radon] def isDirty[T](ref: Ref[T]): Boolean = {
-		val snap = getSnapshot(ref.asInstanceOf[Ref[Any]])
-		snap.isRead = true
-		snap.isWrite
+		val snap = refsSnapshot.get(ref)
+		snap != null && snap.isWrite
 	}
 
 	def commit(): Unit =
