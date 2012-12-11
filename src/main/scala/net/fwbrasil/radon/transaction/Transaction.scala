@@ -202,7 +202,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 				try {
 
 					startIfNotStarted
-					stop
 
 					try {
 						retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds.toSeq: _*)
@@ -227,8 +226,11 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 						case e =>
 							prepareRollback
 							throw e
-					} finally
+					} finally {
+						startIfNotStarted
+						stop
 						snapshots.foreach(setRefContent)
+					}
 				} finally {
 					writeLockeds.foreach(_.writeUnlock)
 					writeLockeds.foreach((ref) => ref.synchronized(ref.notify))
@@ -251,7 +253,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 				readTimestamp(snapshot.isRead, refContent)
 			val write =
 				writeTimestamp(snapshot.isWrite, refContent)
-			require(ref.creationTransaction != this || write != 0)
+			require((ref.creationTransaction != this || write != 0) &&
+				write != Long.MaxValue)
 			ref.setRefContent(value, read, write, destroyedFlag)
 		}
 

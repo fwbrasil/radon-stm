@@ -53,11 +53,11 @@ class NestedTransactionSpecs extends Specification {
 					ref2.get
 				}
 				!ref1 must beEqualTo(300)
-				!ref2 must beEqualTo(200)
+				!ref2 must beEqualTo(100)
 			}
 			transactional {
 				!ref1 must beEqualTo(300)
-				!ref2 must beEqualTo(200)
+				!ref2 must beEqualTo(100)
 			}
 
 		}
