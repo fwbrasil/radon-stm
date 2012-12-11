@@ -133,7 +133,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 		refsRead
 
 	def assignments =
-		for (snapshot <- snapshots) yield (snapshot.ref, snapshot.value, snapshot.destroyedFlag)
+		for (snapshot <- snapshots if (snapshot.isWrite == true)) yield (snapshot.ref, snapshot.value, snapshot.destroyedFlag)
 
 	private[transaction] def isReadOnly =
 		!isRetryWithWrite && refsWrite.isEmpty
@@ -157,11 +157,16 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
 	private[radon] def isDestroyed[T](ref: Ref[T]): Boolean = {
 		startIfNotStarted
-		getSnapshot(ref.asInstanceOf[Ref[Any]], false).destroyedFlag
+		val snap = getSnapshot(ref.asInstanceOf[Ref[Any]], false)
+		snap.isRead = true
+		snap.destroyedFlag
 	}
 
-	private[radon] def isDirty[T](ref: Ref[T]): Boolean =
-		getSnapshot(ref.asInstanceOf[Ref[Any]]).isWrite
+	private[radon] def isDirty[T](ref: Ref[T]): Boolean = {
+		val snap = getSnapshot(ref.asInstanceOf[Ref[Any]])
+		snap.isRead = true
+		snap.isWrite
+	}
 
 	def commit(): Unit =
 		commit(rollback = false)

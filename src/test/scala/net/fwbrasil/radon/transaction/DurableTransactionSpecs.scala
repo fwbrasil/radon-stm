@@ -33,6 +33,28 @@ class DurableTransactionSpecs extends Specification {
 			ok
 		}
 
+		"do not make durable reads" in {
+			val ctx = new DurableTestContext
+			import ctx._
+			val transaction = new Transaction
+			ctx.f =
+				(t: Transaction) => {}
+			val ref =
+				transactional {
+					new Ref(100)
+				}
+			transactional {
+				ref.get
+			}
+			ctx.f =
+				(t: Transaction) => {
+					t must beEqualTo(transaction)
+					t.assignments must beEmpty
+				}
+			transaction.commit
+			ok
+		}
+
 		"do not make durable transient writes" in {
 			val ctx = new DurableTestContext
 			import ctx._

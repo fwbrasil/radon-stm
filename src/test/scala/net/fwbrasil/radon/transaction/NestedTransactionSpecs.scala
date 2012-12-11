@@ -42,19 +42,22 @@ class NestedTransactionSpecs extends Specification {
 		}
 
 		"have changes sent to the outer transaction after commit" in {
-			val ref =
+			val (ref1, ref2) =
 				transactional {
-					new Ref(100)
+					(new Ref(100), new Ref(100))
 				}
 			transactional {
-				ref := 200
+				ref1 := 200
 				transactional(nested) {
-					ref := 300
+					ref1 := 300
+					ref2.get
 				}
-				!ref must beEqualTo(300)
+				!ref1 must beEqualTo(300)
+				!ref2 must beEqualTo(200)
 			}
 			transactional {
-				!ref must beEqualTo(300)
+				!ref1 must beEqualTo(300)
+				!ref2 must beEqualTo(200)
 			}
 
 		}

@@ -18,7 +18,19 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
 	}
 
 	override def commit(): Unit = {
-		parent.refsSnapshot.putAll(refsSnapshot)
+		import scala.collection.JavaConversions._
+		val parentSnaps = parent.refsSnapshot
+		for ((ref, snap) <- refsSnapshot) {
+			val parentSnap = parentSnaps.get(ref)
+			if (parentSnap != null) {
+				parentSnap.destroyedFlag |= snap.destroyedFlag
+				parentSnap.isRead |= snap.isRead
+				parentSnap.isWrite |= snap.isWrite
+				if (snap.isWrite)
+					parentSnap.value = snap.value
+			} else
+				parentSnaps.put(ref, snap)
+		}
 		clear
 	}
 
