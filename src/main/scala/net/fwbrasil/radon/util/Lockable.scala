@@ -18,25 +18,17 @@ private[fwbrasil] trait Lockable {
 	private[fwbrasil] def tryWriteLock =
 		reentrantWriteLock.tryLock
 
-	private[fwbrasil] def readLock = {
+	private[fwbrasil] def readLock =
 		reentrantReadLock.lock
-		true
-	}
 
-	private[fwbrasil] def writeLock = {
+	private[fwbrasil] def writeLock =
 		reentrantWriteLock.lock
-		true
-	}
 
-	private[fwbrasil] def readUnlock = {
+	private[fwbrasil] def readUnlock =
 		reentrantReadLock.unlock
-		true
-	}
 
-	private[fwbrasil] def writeUnlock = {
+	private[fwbrasil] def writeUnlock =
 		reentrantWriteLock.unlock
-		true
-	}
 
 	private[fwbrasil] def readLockCount =
 		reentrantReadWriteLock.getReadLockCount

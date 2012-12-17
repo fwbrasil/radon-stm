@@ -9,10 +9,10 @@ trait RadonContext
 	implicit val context = this
 }
 
-class ConcurrentTransactionException(val refs: Ref[_]*) extends Exception {
+class ConcurrentTransactionException(val refs: List[Ref[_]]) extends Exception {
 	def retryWithWrite = false
 }
-class RetryWithWriteTransactionException(refs: Ref[_]*) extends ConcurrentTransactionException(refs: _*) {
+class RetryWithWriteTransactionException(refs: List[Ref[_]]) extends ConcurrentTransactionException(refs) {
 	override def retryWithWrite = true
 }
 class RetryLimitTransactionException extends Exception

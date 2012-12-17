@@ -22,19 +22,9 @@ class RefSnapshot(val ref: Ref[Any]) {
 	var isWrite = false
 }
 
-trait RefSnapshooter {
-	this: Transaction =>
+abstract class RefSnapshooter extends TransactionStopWatch {
 
 	private[transaction] var refsSnapshot = new IdentityHashMap[Ref[Any], RefSnapshot]()
-
-	private[transaction] def isAValidSnapshot(snapshot: RefSnapshot) =
-		snapshot.originalContent.writeTimestamp < startTimestamp
-
-	private[transaction] def isAnOutdatedSnapshot(ref: Ref[Any], snapshot: RefSnapshot) = {
-		val refContent = snapshot.originalContent
-		(refContent.writeTimestamp != ref.refContent.writeTimestamp
-			&& refContent.readTimestamp != ref.refContent.readTimestamp)
-	}
 
 	protected def getSnapshot(ref: Ref[Any]): RefSnapshot =
 		getSnapshot(ref, true)
@@ -55,19 +45,19 @@ trait RefSnapshooter {
 		snap
 	}
 
-	private[transaction] def snapshotRead(ref: Ref[Any]): Option[Any] = {
+	protected def snapshotRead(ref: Ref[Any]): Option[Any] = {
 		val snap = getSnapshot(ref)
 		snap.isRead = true
 		snap.value
 	}
 
-	private[transaction] def snapshotDestroy(ref: Ref[Any]): Unit = {
+	protected def snapshotDestroy(ref: Ref[Any]): Unit = {
 		val snap = getSnapshot(ref)
 		snap.destroyedFlag = true
 		snap.isWrite = true
 	}
 
-	private[transaction] def snapshotWrite(ref: Ref[Any], value: Option[Any]): Unit = {
+	protected def snapshotWrite(ref: Ref[Any], value: Option[Any]): Unit = {
 		val snap = getSnapshot(ref)
 		snap.value = value
 		snap.isWrite = true
@@ -81,29 +71,38 @@ trait RefSnapshooter {
 		refsSnapshot = new IdentityHashMap[Ref[Any], RefSnapshot]()
 }
 
-trait TransactionValidator {
+abstract class TransactionValidator extends RefSnapshooter {
 	this: Transaction =>
 
-	private[transaction] def validateWrite(ref: Ref[Any]) =
-		retryIfTrue(isRefReadAfterTheStartOfTransaction(ref) || isRefDestroyedAfterTheStartOfTransaction(ref), ref)
+	protected def isAValidSnapshot(snapshot: RefSnapshot) =
+		snapshot.originalContent.writeTimestamp < startTimestamp
 
-	private[transaction] def validateRead(ref: Ref[Any]) = {
-		val snapshot = getSnapshot(ref, false)
-		retryIfTrue((isRefWroteAfterTheStartOfTransaction(ref) || isAnOutdatedSnapshot(ref, snapshot)) && !(isReadOnly && isAValidSnapshot(snapshot)), ref)
+	protected def isAnOutdatedSnapshot(ref: Ref[Any], snapshot: RefSnapshot) = {
+		val refContent = snapshot.originalContent
+		(refContent.writeTimestamp != ref.refContent.writeTimestamp
+			&& refContent.readTimestamp != ref.refContent.readTimestamp)
 	}
 
-	private[transaction] def validateContext(ref: Ref[Any]) =
+	protected def validateWrite(ref: Ref[Any]) =
+		retryIfTrue(isRefReadAfterTheStartOfTransaction(ref) || isRefDestroyedAfterTheStartOfTransaction(ref), List(ref))
+
+	protected def validateRead(ref: Ref[Any]) = {
+		val snapshot = getSnapshot(ref, false)
+		retryIfTrue((isRefWroteAfterTheStartOfTransaction(ref) || isAnOutdatedSnapshot(ref, snapshot)) && !(isReadOnly && isAValidSnapshot(snapshot)), List(ref))
+	}
+
+	protected def validateContext(ref: Ref[Any]) =
 		if (ref.context != context)
 			throw new IllegalStateException("Ref is from another context!")
 
-	private[transaction] def validateConcurrentRefCreation(ref: Ref[Any]) =
-		retryIfTrue(isRefCreatingInAnotherTransaction(ref), ref)
+	protected def validateConcurrentRefCreation(ref: Ref[Any]) =
+		retryIfTrue(isRefCreatingInAnotherTransaction(ref), List(ref))
 
 	private[this] def isRefReadAfterTheStartOfTransaction(ref: Ref[Any]) =
 		ref.refContent.readTimestamp > startTimestamp
 
 	private[this] def isRefCreatingInAnotherTransaction(ref: Ref[Any]) =
-		ref.creationTransaction != this && ref.isCreating
+		ref.isCreating && ref.creationTransaction != this
 
 	private[this] def isRefWroteAfterTheStartOfTransaction(ref: Ref[Any]) =
 		ref.refContent.writeTimestamp > startTimestamp
@@ -113,9 +112,7 @@ trait TransactionValidator {
 }
 
 class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
-		extends TransactionStopWatch
-		with RefSnapshooter
-		with TransactionValidator
+		extends TransactionValidator
 		with ExclusiveThreadLocalItem {
 
 	def this()(implicit context: TransactionContext) = this(false)
@@ -135,12 +132,12 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	def assignments =
 		for (snapshot <- snapshots if (snapshot.isWrite == true)) yield (snapshot.ref, snapshot.value, snapshot.destroyedFlag)
 
-	private[transaction] def isReadOnly =
+	protected def isReadOnly =
 		!isRetryWithWrite && refsWrite.isEmpty
 
-	private[transaction] def retryIfTrue(condition: Boolean, refs: Ref[_]*) =
+	protected def retryIfTrue(condition: Boolean, refs: => List[Ref[_]]) =
 		if (condition)
-			retry(refs: _*)
+			retry(refs)
 
 	private[radon] def put[T](ref: Ref[T], value: Option[T]) = {
 		val anyRef = ref.asInstanceOf[Ref[Any]]
@@ -201,8 +198,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 					startIfNotStarted
 
 					try {
-						retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds.toSeq: _*)
-						retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds.toSeq: _*)
+						retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds)
+						retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds)
 
 						refsReadOnly.foreach(e => {
 							validateContext(e)
@@ -244,8 +241,15 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 		if (!transient) {
 			val ref = snapshot.ref
 			val refContent = ref.refContent
-			val (value, destroyedFlag) =
-				valueAndDestroyedFlag(snapshot, refContent)
+			var value: Option[Any] = None
+			var destroyedFlag = false
+			if (snapshot.isWrite && refContent.writeTimestamp < startTimestamp) {
+				value = snapshot.value
+				destroyedFlag = snapshot.destroyedFlag
+			} else {
+				value = refContent.value
+				destroyedFlag = refContent.destroyedFlag
+			}
 			val read =
 				readTimestamp(snapshot.isRead, refContent)
 			val write =
@@ -347,8 +351,12 @@ trait TransactionContext extends PropagationContext {
 			}
 		}
 	}
-	def retry(refs: Ref[_]*) =
-		throw new ConcurrentTransactionException(refs: _*)
+
+	def retry(refs: Ref[_]*): Unit =
+		retry(refs.toList)
+
+	def retry(refs: List[Ref[_]]): Unit =
+		throw new ConcurrentTransactionException(refs)
 
 	def makeDurable(transaction: Transaction) = {
 

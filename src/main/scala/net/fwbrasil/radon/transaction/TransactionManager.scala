@@ -31,9 +31,13 @@ class TransactionManager(implicit val context: TransactionContext) {
 		activeTransactionThreadLocal.clean(transaction)
 	}
 
-	private[fwbrasil] def getRequiredActiveTransaction =
-		getActiveTransaction.getOrElse(
-			throw new RequiredTransactionException)
+	private[fwbrasil] def getRequiredActiveTransaction: Transaction = {
+		val active = getActiveTransaction
+		if (active != None)
+			active.get
+		else
+			throw new RequiredTransactionException
+	}
 
 	private[fwbrasil] def getActiveTransaction =
 		activeTransactionThreadLocal.get
