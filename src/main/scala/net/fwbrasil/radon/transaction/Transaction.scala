@@ -112,8 +112,8 @@ abstract class TransactionValidator extends RefSnapshooter {
 }
 
 class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
-		extends TransactionValidator
-		with ExclusiveThreadLocalItem {
+	extends TransactionValidator
+	with ExclusiveThreadLocalItem {
 
 	def this()(implicit context: TransactionContext) = this(false)
 
@@ -121,9 +121,9 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
 	private[radon] var isRetryWithWrite = false
 
-	private var refsRead = List[Ref[Any]]()
-	private var refsReadOnly = List[Ref[Any]]()
-	private var refsWrite = List[Ref[Any]]()
+	private var refsRead = ListBuffer[Ref[Any]]()
+	private var refsReadOnly = ListBuffer[Ref[Any]]()
+	private var refsWrite = ListBuffer[Ref[Any]]()
 	private var snapshots = List[RefSnapshot]()
 
 	def reads =
@@ -181,9 +181,9 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 			if (snapshot.isWrite)
 				refsWrite += ref
 		}
-		this.refsRead = refsRead.toList
-		this.refsReadOnly = refsReadOnly.toList
-		this.refsWrite = refsWrite.toList
+		this.refsRead = refsRead
+		this.refsReadOnly = refsReadOnly
+		this.refsWrite = refsWrite
 		this.snapshots = snapshots
 	}
 
@@ -296,8 +296,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 	}
 
 	private[transaction] def clear = {
-		refsRead = List()
-		refsWrite = List()
+		refsRead = ListBuffer()
+		refsWrite = ListBuffer()
 		clearSnapshots
 		clearStopWatch
 	}
