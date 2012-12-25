@@ -117,13 +117,13 @@ class Supports extends Propagation {
 	}
 }
 class Transient extends Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
-		import context.transactionManager._
+	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit ctx: TransactionContext): A = {
+		import ctx.transactionManager._
 		val wasActive = isActive(transaction)
 		if (wasActive)
 			deactivate(transaction)
 		try {
-			runInTransactionWithRetry(new Transaction(transient = true))(f)
+			runInTransactionWithRetry(new Transaction(transient = true)(ctx))(f)
 		} finally
 			if (wasActive)
 				activate(transaction)

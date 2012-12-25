@@ -45,10 +45,10 @@ class TransactionManager(implicit val context: TransactionContext) {
 	private[radon] def runInTransaction[A](transaction: Transaction)(f: => A): A = {
 		activate(Option(transaction))
 		val res =
-			try {
+			try
 				f
-			} catch {
-				case e => {
+			catch {
+				case e: Throwable => {
 					deactivate(Option(transaction))
 					transaction.rollback
 					throw e

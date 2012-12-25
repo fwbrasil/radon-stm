@@ -4,8 +4,8 @@ import java.util.concurrent.locks._
 import net.fwbrasil.radon.transaction.TransactionContext
 import net.fwbrasil.radon.transaction.Transaction
 import net.fwbrasil.radon.util.Lockable
-import net.fwbrasil.radon.util.ReferenceWeakValueMap
 import net.fwbrasil.radon.transaction.NestedTransaction
+import scala.collection.mutable.WeakHashMap
 
 trait Source[+T] {
 	def unary_! = get.getOrElse(null.asInstanceOf[T])
@@ -44,11 +44,11 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 	private[this] var _refContent: RefContent[T] = new RefContent(None, 0l, 0l, false)
 
 	@transient
-	private[this] var _weakListenersMap: ReferenceWeakValueMap[Int, RefListener[T]] = _
+	private[this] var _weakListenersMap: WeakHashMap[RefListener[T], Int] = _
 
 	def weakListenersMap = {
 		if (_weakListenersMap == null)
-			_weakListenersMap = ReferenceWeakValueMap[Int, RefListener[T]]()
+			_weakListenersMap = new WeakHashMap[RefListener[T], Int]
 		else
 			_weakListenersMap
 		_weakListenersMap
@@ -78,9 +78,10 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 		setRefContent(None, readTimestamp, writeTimestamp, true)
 
 	private[fwbrasil] def setRefContent(pValue: Option[T], pReadTimestamp: Long, pWriteTimestamp: Long, pDestroyedFlag: Boolean): Unit = {
-		if (_weakListenersMap != null)
-			for (listener <- _weakListenersMap.values)
+		if (_weakListenersMap != null) {
+			for (listener <- _weakListenersMap.keys)
 				listener.notifyCommit(this)
+		}
 		_refContent = new RefContent[T](pValue, pReadTimestamp, pWriteTimestamp, pDestroyedFlag)
 	}
 
@@ -95,7 +96,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 	def get: Option[T] = {
 		val result = getRequiredTransaction.get(this)
 		if (_weakListenersMap != null)
-			for (listener <- _weakListenersMap.values)
+			for (listener <- _weakListenersMap.keys)
 				listener.notifyGet(this)
 		result
 	}
@@ -108,7 +109,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 			import context._
 			transactional(nested) {
 				getRequiredTransaction.put(this, value)
-				for (listener <- _weakListenersMap.values)
+				for (listener <- _weakListenersMap.keys)
 					listener.notifyPut(this, value)
 			}
 		}
@@ -119,7 +120,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 
 	private[radon] def notifyRollback =
 		if (_weakListenersMap != null)
-			for (listener <- _weakListenersMap.values)
+			for (listener <- _weakListenersMap.keys)
 				listener.notifyRollback(this)
 
 	def destroy: Unit =
@@ -132,7 +133,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 		getRequiredTransaction.isDirty(this)
 
 	def addWeakListener(listener: RefListener[T]) =
-		weakListenersMap += (listener.hashCode() -> listener)
+		weakListenersMap += (listener -> listener.hashCode())
 
 	protected def snapshot =
 		if (getTransaction.isDefined) {

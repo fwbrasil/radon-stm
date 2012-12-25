@@ -51,7 +51,7 @@ class STMSpecification extends Specification {
 				new Ref[Long](100)
 			}
 			ref must not be null
-			(ref := null) must throwA[RequiredTransactionException]
+			(ref := null.asInstanceOf[Long]) must throwA[RequiredTransactionException]
 		}
 		"not be read" in {
 			val ref = transactional {

@@ -112,8 +112,8 @@ abstract class TransactionValidator extends RefSnapshooter {
 }
 
 class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
-	extends TransactionValidator
-	with ExclusiveThreadLocalItem {
+		extends TransactionValidator
+		with ExclusiveThreadLocalItem {
 
 	def this()(implicit context: TransactionContext) = this(false)
 
@@ -217,7 +217,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 						if (!transient && !rollback)
 							context.makeDurable(this)
 					} catch {
-						case e =>
+						case e: Throwable =>
 							prepareRollback
 							throw e
 					} finally {
