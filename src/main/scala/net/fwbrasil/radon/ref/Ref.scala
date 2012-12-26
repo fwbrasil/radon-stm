@@ -163,6 +163,8 @@ case class RefContent[T](
 
 trait RefContext {
 
+	import language.implicitConversions
+
 	type Ref[T] = net.fwbrasil.radon.ref.Ref[T]
 
 	implicit def refToValue[A](ref: Ref[A]): A =

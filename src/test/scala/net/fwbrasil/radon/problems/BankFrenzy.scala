@@ -57,7 +57,7 @@ class BankFrenzy extends Specification {
 
 			val peopleActors = for {
 				i <- 0 until people.length
-				val p = people(i)
+				p = people(i)
 			} yield thread {
 				transactional(transfer(50, p, business3)) // payoff the mob
 				transactional(transfer(i * 10, p, business1)) // purchase from business1
