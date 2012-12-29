@@ -1,28 +1,23 @@
 package net.fwbrasil.radon
 
+import org.scalameter.api._
 import net.fwbrasil.radon.TestRadonContext._
 
-object PerformanceTest extends App {
+object RadonPerformanceTest
+		extends PerformanceTest.Regression {
 
-	val num = 100000
+	def persistor = new SerializationPersistor
 
-	def create =
-		transactional {
-			for (i <- 0 until num)
-				yield new Ref(i)
+	val nums: Gen[Int] =
+		Gen.range("num")(0, 100000, 100)
+
+	performance of "Ref" in {
+		measure method "empty constructor" in {
+			using(nums) in {
+				_ => transactional(new Ref[Int])
+			}
 		}
-
-	def modify(refs: Seq[Ref[Int]]) =
-		transactional {
-			refs.foreach(ref => ref := !ref + 1)
-		}
-
-	val refs = create
-	modify(refs)
+	}
 
 }
 
-object SimpleMain extends App {
-	val ref = transactional(new Ref(0))
-	transactional(ref := !ref + 1)
-}
