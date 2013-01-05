@@ -199,11 +199,7 @@ class STMSpecs extends Specification {
 
 		val pool = (0 until NUM).foldRight(List[Thread]()) { (i, ls) =>
 			val t = thread {
-				try
-					transactional(modify)
-				catch {
-					case e => e.printStackTrace; throw e
-				}
+				transactional(modify)
 			}
 
 			t :: ls
