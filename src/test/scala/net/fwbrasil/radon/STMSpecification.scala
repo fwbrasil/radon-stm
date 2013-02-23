@@ -94,7 +94,7 @@ class STMSpecification extends Specification {
                 !ref must beEqualTo(100)
             }
             t1.commit
-            t2.commit
+            t2.commit must throwA[ConcurrentTransactionException]
             transactional {
                 !ref must beEqualTo(200)
             }

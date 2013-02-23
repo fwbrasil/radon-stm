@@ -74,9 +74,6 @@ abstract class RefSnapshooter extends TransactionStopWatch {
 abstract class TransactionValidator extends RefSnapshooter {
     this: Transaction =>
 
-    protected def isAValidSnapshot(snapshot: RefSnapshot) =
-        snapshot.originalContent.writeTimestamp < startTimestamp
-
     protected def isAnOutdatedSnapshot(ref: Ref[Any], snapshot: RefSnapshot) = {
         val originalContent = snapshot.originalContent
         (originalContent.writeTimestamp != ref.refContent.writeTimestamp
@@ -89,14 +86,11 @@ abstract class TransactionValidator extends RefSnapshooter {
                 isRefDestroyedAfterTheStartOfTransaction(ref),
             List(ref))
 
-    protected def validateRead(ref: Ref[Any]) = {
-        val snapshot = getSnapshot(ref, false)
+    protected def validateRead(ref: Ref[Any]) =
         retryIfTrue(
             (isRefWroteAfterTheStartOfTransaction(ref) ||
-                isAnOutdatedSnapshot(ref, snapshot)) &&
-                !(isReadOnly && isAValidSnapshot(snapshot)),
+                isAnOutdatedSnapshot(ref, getSnapshot(ref, false))),
             List(ref))
-    }
 
     protected def validateContext(ref: Ref[Any]) =
         if (ref.context != context)
@@ -284,7 +278,11 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             refContent.writeTimestamp
 
     def prepareRollback = {
-        val refsWrote = refsWrite
+        val refsWrote =
+            if (refsWrite != null)
+                refsWrite
+            else
+                new ListBuffer[Ref[Any]]()
         val refsCreated =
             refsWrote.filter(_.creationTransaction == this)
         clear
