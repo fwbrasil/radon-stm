@@ -4,16 +4,16 @@ import ThreadUtil._
 
 object Debug {
 
-	var isDebuggin = false
-	val debugParkingLot = new ParkingLot
+    var isDebuggin = false
+    val debugParkingLot = new ParkingLot
 
-	def setDebug = isDebuggin = true
-	def setNormal = {
-		isDebuggin = false
-		debugParkingLot.unparkAll
-	}
+    def setDebug = isDebuggin = true
+    def setNormal = {
+        isDebuggin = false
+        debugParkingLot.unparkAll
+    }
 
-	def parkIfDebug =
-		if (isDebuggin)
-			debugParkingLot.park
+    def parkIfDebug =
+        if (isDebuggin)
+            debugParkingLot.park
 }

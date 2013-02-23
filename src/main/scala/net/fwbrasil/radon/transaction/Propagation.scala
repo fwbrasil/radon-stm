@@ -3,7 +3,7 @@ package net.fwbrasil.radon.transaction
 import net.fwbrasil.radon.{ NotSupportedTransactionException, RequiredTransactionException }
 
 trait Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A
+    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A
 }
 
 /**
@@ -13,18 +13,18 @@ trait Propagation {
  * transaction when the method completes.
  */
 class Required extends Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
-		import context.transactionManager._
-		if (transaction != None) {
-			val wasActive = isActive(transaction)
-			try {
-				runInTransaction(transaction.get)(f)
-			} finally
-				if (wasActive)
-					activate(transaction)
-		} else
-			runInNewTransactionWithRetry(f)
-	}
+    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
+        import context.transactionManager._
+        if (transaction != None) {
+            val wasActive = isActive(transaction)
+            try {
+                runInTransaction(transaction.get)(f)
+            } finally
+                if (wasActive)
+                    activate(transaction)
+        } else
+            runInNewTransactionWithRetry(f)
+    }
 }
 
 /**
@@ -34,17 +34,17 @@ class Required extends Propagation {
  * if the client is a local client. If the calling client has a transaction context, the case is treated as Required by the container.
  */
 class Mandatory extends Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
-		import context.transactionManager._
-		if (transaction == None)
-			throw new RequiredTransactionException
-		val wasActive = isActive(transaction)
-		try {
-			runInTransaction(transaction.get)(f)
-		} finally
-			if (wasActive)
-				activate(transaction)
-	}
+    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
+        import context.transactionManager._
+        if (transaction == None)
+            throw new RequiredTransactionException
+        val wasActive = isActive(transaction)
+        try {
+            runInTransaction(transaction.get)(f)
+        } finally
+            if (wasActive)
+                activate(transaction)
+    }
 }
 
 /**
@@ -54,12 +54,12 @@ class Mandatory extends Propagation {
  * the container invokes the method without initiating a transaction.
  */
 class Never extends Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
-		import context.transactionManager._
-		if (transaction != None || getActiveTransaction != None)
-			throw new NotSupportedTransactionException
-		f
-	}
+    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
+        import context.transactionManager._
+        if (transaction != None || getActiveTransaction != None)
+            throw new NotSupportedTransactionException
+        f
+    }
 }
 
 /**
@@ -68,17 +68,17 @@ class Never extends Propagation {
  * enterprise bean's method. After the method completes, the container resumes the suspended transaction association.
  */
 class NotSupported extends Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
-		import context.transactionManager._
-		val wasActive = isActive(transaction)
-		if (wasActive)
-			deactivate(transaction)
-		try {
-			f
-		} finally
-			if (wasActive)
-				activate(transaction)
-	}
+    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
+        import context.transactionManager._
+        val wasActive = isActive(transaction)
+        if (wasActive)
+            deactivate(transaction)
+        try {
+            f
+        } finally
+            if (wasActive)
+                activate(transaction)
+    }
 }
 
 /**
@@ -88,17 +88,17 @@ class NotSupported extends Propagation {
  * When the method and the transaction complete, the container resumes the suspended transaction.
  */
 class RequiresNew extends Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
-		import context.transactionManager._
-		val wasActive = isActive(transaction)
-		if (wasActive)
-			deactivate(transaction)
-		try {
-			runInNewTransactionWithRetry(f)
-		} finally
-			if (wasActive)
-				activate(transaction)
-	}
+    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
+        import context.transactionManager._
+        val wasActive = isActive(transaction)
+        if (wasActive)
+            deactivate(transaction)
+        try {
+            runInNewTransactionWithRetry(f)
+        } finally
+            if (wasActive)
+                activate(transaction)
+    }
 }
 
 /**
@@ -108,35 +108,35 @@ class RequiresNew extends Propagation {
  * context is not propagated to the enterprise bean method.
  */
 class Supports extends Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
-		import context.transactionManager._
-		if (transaction != None)
-			runInTransaction(transaction.get)(f)
-		else
-			f
-	}
+    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
+        import context.transactionManager._
+        if (transaction != None)
+            runInTransaction(transaction.get)(f)
+        else
+            f
+    }
 }
 class Transient extends Propagation {
-	private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit ctx: TransactionContext): A = {
-		import ctx.transactionManager._
-		val wasActive = isActive(transaction)
-		if (wasActive)
-			deactivate(transaction)
-		try {
-			runInTransactionWithRetry(new Transaction(transient = true)(ctx))(f)
-		} finally
-			if (wasActive)
-				activate(transaction)
-	}
+    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit ctx: TransactionContext): A = {
+        import ctx.transactionManager._
+        val wasActive = isActive(transaction)
+        if (wasActive)
+            deactivate(transaction)
+        try {
+            runInTransactionWithRetry(new Transaction(transient = true)(ctx))(f)
+        } finally
+            if (wasActive)
+                activate(transaction)
+    }
 }
 trait PropagationContext {
-	type Propagation = net.fwbrasil.radon.transaction.Propagation
-	val required = new net.fwbrasil.radon.transaction.Required
-	val mandatory = new net.fwbrasil.radon.transaction.Mandatory
-	val never = new net.fwbrasil.radon.transaction.Never
-	val notSupported = new net.fwbrasil.radon.transaction.NotSupported
-	val requiresNew = new net.fwbrasil.radon.transaction.RequiresNew
-	val supports = new net.fwbrasil.radon.transaction.Supports
-	val nested = new net.fwbrasil.radon.transaction.Nested
-	val transient = new net.fwbrasil.radon.transaction.Transient
+    type Propagation = net.fwbrasil.radon.transaction.Propagation
+    val required = new net.fwbrasil.radon.transaction.Required
+    val mandatory = new net.fwbrasil.radon.transaction.Mandatory
+    val never = new net.fwbrasil.radon.transaction.Never
+    val notSupported = new net.fwbrasil.radon.transaction.NotSupported
+    val requiresNew = new net.fwbrasil.radon.transaction.RequiresNew
+    val supports = new net.fwbrasil.radon.transaction.Supports
+    val nested = new net.fwbrasil.radon.transaction.Nested
+    val transient = new net.fwbrasil.radon.transaction.Transient
 }

@@ -4,16 +4,16 @@ import transaction.TransactionManager
 import net.fwbrasil.radon.ref.Ref
 
 trait RadonContext
-		extends ref.RefContext
-		with transaction.TransactionContext {
-	implicit val context = this
+        extends ref.RefContext
+        with transaction.TransactionContext {
+    implicit val context = this
 }
 
 class ConcurrentTransactionException(val refs: List[Ref[_]]) extends Exception {
-	def retryWithWrite = false
+    def retryWithWrite = false
 }
 class RetryWithWriteTransactionException(refs: List[Ref[_]]) extends ConcurrentTransactionException(refs) {
-	override def retryWithWrite = true
+    override def retryWithWrite = true
 }
 class RetryLimitTransactionException extends Exception
 class RequiredTransactionException extends Exception
