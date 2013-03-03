@@ -123,7 +123,7 @@ class Transient extends Propagation {
         if (wasActive)
             deactivate(transaction)
         try {
-            runInTransactionWithRetry(new Transaction(transient = true)(ctx))(f)
+            runInTransactionWithRetry(new Transaction(transient = true)(ctx), f)
         } finally
             if (wasActive)
                 activate(transaction)

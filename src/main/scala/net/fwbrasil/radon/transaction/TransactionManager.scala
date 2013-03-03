@@ -7,6 +7,7 @@ import net.fwbrasil.radon.RetryWithWriteTransactionException
 import net.fwbrasil.radon.ConcurrentTransactionException
 import net.fwbrasil.radon.util.ExclusiveThreadLocal
 import net.fwbrasil.radon.util.Debug
+import scala.annotation.tailrec
 
 class TransactionManager(implicit val context: TransactionContext) {
 
@@ -60,22 +61,15 @@ class TransactionManager(implicit val context: TransactionContext) {
     }
 
     private[radon] def runInNewTransactionWithRetry[A](f: => A): A =
-        runInTransactionWithRetry(new Transaction)(f)
+        runInTransactionWithRetry(new Transaction, f)
 
     protected def waitToRetry(e: ConcurrentTransactionException) =
         Thread.sleep(context.milisToWaitBeforeRetry)
 
-    private[radon] def runInTransactionWithRetry[A](transaction: Transaction)(f: => A): A = {
-        var retryCount = 0
-        def retry: A = {
-            retryCount += 1
-            transaction.clear
-            if (retryCount < context.retryLimit)
-                attemptTransact
-            else
-                throw new RetryLimitTransactionException
-        }
-        def attemptTransact: A = {
+    @tailrec private[radon] final def runInTransactionWithRetry[A](transaction: Transaction, f: => A, retryCount: Int = 0): A = {
+        if (retryCount >= context.retryLimit) {
+            throw new RetryLimitTransactionException
+        } else {
             try {
                 val result = runInTransaction(transaction)(f)
                 transaction.commit
@@ -84,10 +78,9 @@ class TransactionManager(implicit val context: TransactionContext) {
                 case e: ConcurrentTransactionException =>
                     waitToRetry(e)
                     transaction.isRetryWithWrite = e.retryWithWrite
-                    retry
+                    runInTransactionWithRetry(transaction, f, retryCount + 1)
             }
         }
-        attemptTransact
     }
 
 }

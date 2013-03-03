@@ -126,13 +126,13 @@ class TransactionManagerSpecs extends Specification {
                     transactional {
                         new Ref(100)
                     }
-                manager.runInTransactionWithRetry(transaction) {
+                manager.runInTransactionWithRetry(transaction, {
                     manager.getRequiredActiveTransaction must beEqualTo(transaction)
                     transactional {
                         ref := 200
                     }
                     1
-                } must beEqualTo(1)
+                }) must beEqualTo(1)
                 transactional {
                     !ref
                 } must beEqualTo(200)
@@ -147,7 +147,7 @@ class TransactionManagerSpecs extends Specification {
                     transactional {
                         new Ref(100)
                     }
-                manager.runInTransactionWithRetry(transaction) {
+                manager.runInTransactionWithRetry(transaction, {
                     manager.getRequiredActiveTransaction must beEqualTo(transaction)
                     transactional {
                         ref := 200
@@ -157,7 +157,7 @@ class TransactionManagerSpecs extends Specification {
                         throw new ConcurrentTransactionException(List())
                     }
                     1
-                } must beEqualTo(1)
+                }) must beEqualTo(1)
                 transactional {
                     !ref
                 } must beEqualTo(200)
@@ -171,14 +171,14 @@ class TransactionManagerSpecs extends Specification {
                     transactional {
                         new Ref(100)
                     }
-                manager.runInTransactionWithRetry(transaction) {
+                manager.runInTransactionWithRetry(transaction, {
                     manager.getRequiredActiveTransaction must beEqualTo(transaction)
                     transactional(transaction) {
                         ref := 200
                         throw new ConcurrentTransactionException(List())
                         1
                     }
-                } must throwA[RetryLimitTransactionException]
+                }) must throwA[RetryLimitTransactionException]
                 transactional {
                     !ref
                 } must beEqualTo(100)
@@ -192,7 +192,7 @@ class TransactionManagerSpecs extends Specification {
                     transactional {
                         new Ref(100)
                     }
-                manager.runInTransactionWithRetry(transaction) {
+                manager.runInTransactionWithRetry(transaction, {
                     manager.getRequiredActiveTransaction must beEqualTo(transaction)
                     transactional {
                         ref := 200
@@ -200,7 +200,7 @@ class TransactionManagerSpecs extends Specification {
                     if (!transaction.isRetryWithWrite)
                         throw new RetryWithWriteTransactionException(List())
                     1
-                } must beEqualTo(1)
+                }) must beEqualTo(1)
                 transactional {
                     !ref
                 } must beEqualTo(200)

@@ -51,7 +51,7 @@ class Nested extends Propagation {
         deactivate(transaction)
         try {
             val nested = new NestedTransaction(transaction.get)(ctx)
-            runInTransactionWithRetry(nested)(f)
+            runInTransactionWithRetry(nested, f)
         } finally
             activate(transaction)
     }
