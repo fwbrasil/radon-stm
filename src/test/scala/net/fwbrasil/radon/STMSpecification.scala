@@ -74,7 +74,7 @@ class STMSpecification extends Specification {
                     throw new IllegalStateException
                     1
                 }
-            } catch { case _ => }
+            } catch { case _: Throwable => }
             transactional {
                 !ref must beEqualTo(100)
             }
