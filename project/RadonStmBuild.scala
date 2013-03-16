@@ -27,8 +27,9 @@ object RadonStmBuild extends Build {
 				javacOptions ++= Seq("-source", "1.5", "-target", "1.5"),
 				publishTo := Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as ("maven") withPermissions ("0644")),
 				organization := "net.fwbrasil",
-				scalaVersion := "2.10.0",
-				version := "1.2-RC6",
+				scalaVersion := "2.10.1",
+				crossScalaVersions := Seq("2.10.0", "2.10.1"),
+				version := "1.2",
 				resolvers ++= customResolvers,
 				testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
 			)
