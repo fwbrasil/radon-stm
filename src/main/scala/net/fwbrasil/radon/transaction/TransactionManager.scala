@@ -67,7 +67,8 @@ class TransactionManager(implicit val context: TransactionContext) {
         runInTransactionWithRetry(new Transaction, f)
 
     protected def waitToRetry(e: ConcurrentTransactionException) =
-        Thread.sleep(context.milisToWaitBeforeRetry)
+        if (context.milisToWaitBeforeRetry > 0)
+            Thread.sleep(context.milisToWaitBeforeRetry)
 
     @tailrec private[radon] final def runInTransactionWithRetry[A](
         transaction: Transaction, f: => A, retryCount: Int = 0): A = {

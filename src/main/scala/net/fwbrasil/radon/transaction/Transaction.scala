@@ -237,27 +237,26 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             clear
     }
 
-    private[this] def setRefContent(snapshot: RefSnapshot) =
-        if (!transient) {
-            val ref = snapshot.ref
-            val refContent = ref.refContent
-            var value: Option[Any] = None
-            var destroyedFlag = false
-            if (snapshot.isWrite && refContent.writeTimestamp < startTimestamp) {
-                value = snapshot.value
-                destroyedFlag = snapshot.destroyedFlag
-            } else {
-                value = refContent.value
-                destroyedFlag = refContent.destroyedFlag
-            }
-            val read =
-                readTimestamp(snapshot.isRead, refContent)
-            val write =
-                writeTimestamp(snapshot.isWrite, refContent)
-            require((ref.creationTransaction != this || write != 0) &&
-                write != Long.MaxValue)
-            ref.setRefContent(value, read, write, destroyedFlag)
+    private[this] def setRefContent(snapshot: RefSnapshot) = {
+        val ref = snapshot.ref
+        val refContent = ref.refContent
+        var value: Option[Any] = None
+        var destroyedFlag = false
+        if (snapshot.isWrite && refContent.writeTimestamp < startTimestamp) {
+            value = snapshot.value
+            destroyedFlag = snapshot.destroyedFlag
+        } else {
+            value = refContent.value
+            destroyedFlag = refContent.destroyedFlag
         }
+        val read =
+            readTimestamp(snapshot.isRead, refContent)
+        val write =
+            writeTimestamp(snapshot.isWrite, refContent)
+        require((ref.creationTransaction != this || write != 0) &&
+            write != Long.MaxValue)
+        ref.setRefContent(value, read, write, destroyedFlag)
+    }
 
     private[this] def valueAndDestroyedFlag(snapshot: RefSnapshot, refContent: RefContent[_]) =
         if (snapshot.isWrite && refContent.writeTimestamp < startTimestamp)
