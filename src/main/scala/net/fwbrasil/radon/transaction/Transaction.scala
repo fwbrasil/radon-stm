@@ -227,7 +227,9 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
                     } finally {
                         startIfNotStarted
                         stop
-                        snapshots.foreach(setRefContent)
+                        val snapshotsIterator = snapshots.iterator
+                        snapshots = List()
+                        snapshotsIterator.foreach(setRefContent)
                     }
                 } finally
                     writeLockeds.foreach(_.writeUnlock)
