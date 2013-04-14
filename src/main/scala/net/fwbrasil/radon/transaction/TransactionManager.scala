@@ -54,6 +54,7 @@ class TransactionManager(implicit val context: TransactionContext) {
                 f
             catch {
                 case e: Throwable => {
+                    e.printStackTrace()
                     deactivate(Option(transaction))
                     transaction.rollback
                     throw e
@@ -74,19 +75,15 @@ class TransactionManager(implicit val context: TransactionContext) {
         transaction: Transaction, f: => A, retryCount: Int = 0): A = {
         if (retryCount >= context.retryLimit)
             throw new RetryLimitTransactionException
-        Try {
+        try {
             val result = runInTransaction(transaction)(f)
             transaction.commit
             result
-        } match {
-            case Success(result) =>
-                result
-            case Failure(e: ConcurrentTransactionException) =>
+        } catch {
+            case e: ConcurrentTransactionException =>
                 waitToRetry(e)
                 transaction.isRetryWithWrite = e.retryWithWrite
                 runInTransactionWithRetry(transaction, f, retryCount + 1)
-            case Failure(other) =>
-                throw other
         }
     }
 

@@ -6,6 +6,8 @@ import net.fwbrasil.radon.transaction.Transaction
 import net.fwbrasil.radon.util.Lockable
 import net.fwbrasil.radon.transaction.NestedTransaction
 import scala.collection.mutable.WeakHashMap
+import java.util.Collections
+import scala.collection.mutable.SynchronizedMap
 
 trait Source[+T] {
     def unary_! = get.getOrElse(null.asInstanceOf[T])
@@ -48,7 +50,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 
     def weakListenersMap = {
         if (_weakListenersMap == null)
-            _weakListenersMap = new WeakHashMap[RefListener[T], Int]
+            _weakListenersMap = new WeakHashMap[RefListener[T], Int] with SynchronizedMap[RefListener[T], Int]
         else
             _weakListenersMap
         _weakListenersMap

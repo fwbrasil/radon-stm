@@ -255,8 +255,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             readTimestamp(snapshot.isRead, refContent)
         val write =
             writeTimestamp(snapshot.isWrite, refContent)
-        require((ref.creationTransaction != this || write != 0) &&
-            write != Long.MaxValue)
+        require(((ref.creationTransaction != this || write != 0) &&
+            write != Long.MaxValue) || transient)
         ref.setRefContent(value, read, write, destroyedFlag)
     }
 
