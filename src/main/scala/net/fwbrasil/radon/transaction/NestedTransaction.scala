@@ -34,6 +34,14 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
         clear
     }
 
+    private[radon] def rootTransaction: Transaction =
+        parent match {
+            case nested: NestedTransaction =>
+                nested.rootTransaction
+            case normal =>
+                normal
+        }
+
     override private[radon] def isDestroyed[T](ref: Ref[T]): Boolean = {
         super.isDestroyed(ref) || parent.isDestroyed(ref)
     }

@@ -54,7 +54,6 @@ class TransactionManager(implicit val context: TransactionContext) {
                 f
             catch {
                 case e: Throwable => {
-                    e.printStackTrace()
                     deactivate(Option(transaction))
                     transaction.rollback
                     throw e

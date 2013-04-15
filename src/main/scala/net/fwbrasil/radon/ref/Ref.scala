@@ -57,7 +57,13 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
     }
 
     @transient
-    private[radon] val creationTransaction = getRequiredTransaction
+    private[radon] val creationTransaction =
+        getRequiredTransaction match {
+            case nested: NestedTransaction =>
+                nested.rootTransaction
+            case normal =>
+                normal
+        }
 
     def getRequiredTransaction =
         getRequiredActiveTransaction
