@@ -74,7 +74,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
     if (initialize)
         put(pValueOption, getRequiredTransaction)
 
-    private[fwbrasil] def refContent =
+    def refContent =
         _refContent
 
     private[fwbrasil] def setRefContent(pValue: Option[T]): Unit = {
