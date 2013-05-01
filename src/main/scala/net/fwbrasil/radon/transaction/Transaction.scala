@@ -1,122 +1,13 @@
 
 package net.fwbrasil.radon.transaction
 
-import net.fwbrasil.radon.ConcurrentTransactionException
-import net.fwbrasil.radon.RadonContext
+import scala.collection.JavaConversions.collectionAsScalaIterable
+import scala.collection.mutable.ListBuffer
+
 import net.fwbrasil.radon.ref.Ref
 import net.fwbrasil.radon.ref.RefContent
 import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
-import net.fwbrasil.radon.util.Debug
-import net.fwbrasil.radon.util.Lockable._
-import net.fwbrasil.radon.transaction.time._
-import java.util.IdentityHashMap
-import java.util.HashMap
-import java.util.{ HashSet => JHashSet }
-import scala.collection.mutable.ListBuffer
-
-class RefSnapshot(val ref: Ref[Any]) {
-    val originalContent = ref.refContent
-    var value = originalContent.value
-    var destroyedFlag = originalContent.destroyedFlag
-    var isRead = false
-    var isWrite = false
-}
-
-abstract class RefSnapshooter extends TransactionStopWatch {
-
-    private[transaction] var refsSnapshot = new IdentityHashMap[Ref[Any], RefSnapshot]()
-
-    protected def getSnapshot(ref: Ref[Any]): RefSnapshot =
-        getSnapshot(ref, true)
-
-    protected def getSnapshot(ref: Ref[Any], validateDestroyed: Boolean): RefSnapshot = {
-        if (validateDestroyed)
-            startIfNotStarted
-        val snapOrNull = refsSnapshot.get(ref)
-        val snap =
-            if (snapOrNull == null) {
-                val newSnap = new RefSnapshot(ref)
-                refsSnapshot.put(ref, newSnap)
-                newSnap
-            } else
-                snapOrNull
-        if (validateDestroyed)
-            validateIfDestroyed(snap)
-        snap
-    }
-
-    protected def snapshotRead(ref: Ref[Any]): Option[Any] = {
-        val snap = getSnapshot(ref)
-        snap.isRead = true
-        snap.value
-    }
-
-    protected def snapshotDestroy(ref: Ref[Any]): Unit = {
-        val snap = getSnapshot(ref)
-        snap.destroyedFlag = true
-        snap.isWrite = true
-    }
-
-    protected def snapshotWrite(ref: Ref[Any], value: Option[Any]): Unit = {
-        val snap = getSnapshot(ref)
-        snap.value = value
-        snap.isWrite = true
-    }
-
-    private def validateIfDestroyed(snapshot: RefSnapshot) =
-        if (snapshot.destroyedFlag)
-            throw new IllegalStateException("Triyng to access a destroyed ref.")
-
-    private[transaction] def clearSnapshots =
-        refsSnapshot.clear
-}
-
-abstract class TransactionValidator extends RefSnapshooter {
-    this: Transaction =>
-
-    protected def isAnOutdatedSnapshot(ref: Ref[Any], snapshot: RefSnapshot) = {
-        val originalContent = snapshot.originalContent
-        (originalContent.writeTimestamp != ref.refContent.writeTimestamp
-            && originalContent.readTimestamp != ref.refContent.readTimestamp)
-    }
-
-    protected def validateWrite(ref: Ref[Any]) =
-        retryIfTrue(
-            isRefReadAfterTheStartOfTransaction(ref) ||
-                isRefDestroyedAfterTheStartOfTransaction(ref),
-            List(ref))
-
-    protected def validateRead(ref: Ref[Any]) =
-        retryIfTrue(
-            (isRefWroteAfterTheStartOfTransaction(ref) ||
-                isAnOutdatedSnapshot(ref, getSnapshot(ref, false))),
-            List(ref))
-
-    protected def validateContext(ref: Ref[Any]) =
-        if (ref.context != context)
-            throw new IllegalStateException("Ref is from another context!")
-
-    protected def validateConcurrentRefCreation(ref: Ref[Any]) =
-        retryIfTrue(isRefCreatingInAnotherTransaction(ref), List(ref))
-
-    private[this] def isRefReadAfterTheStartOfTransaction(ref: Ref[Any]) =
-        ref.refContent.readTimestamp > startTimestamp
-
-    private[this] def isRefCreatingInAnotherTransaction(ref: Ref[Any]) =
-        ref.isCreating && ref.creationTransaction != this &&
-            (ref.creationTransaction match {
-                case nested: NestedTransaction =>
-                    nested.rootTransaction == this
-                case normal =>
-                    false
-            })
-
-    private[this] def isRefWroteAfterTheStartOfTransaction(ref: Ref[Any]) =
-        ref.refContent.writeTimestamp > startTimestamp
-
-    private[this] def isRefDestroyedAfterTheStartOfTransaction(ref: Ref[Any]) =
-        isRefWroteAfterTheStartOfTransaction(ref) && ref.destroyedFlag
-}
+import net.fwbrasil.radon.util.Lockable.lockall
 
 class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
         extends TransactionValidator
@@ -144,10 +35,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
     protected def isReadOnly =
         !isRetryWithWrite && refsWrite.isEmpty
-
-    protected def retryIfTrue(condition: Boolean, refs: => List[Ref[_]]) =
-        if (condition)
-            retry(refs)
 
     private[radon] def put[T](ref: Ref[T], value: Option[T]) = {
         val anyRef = ref.asInstanceOf[Ref[Any]]
@@ -313,62 +200,4 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         clearStopWatch
     }
 
-}
-
-trait TransactionContext extends PropagationContext {
-
-    protected[fwbrasil] val transactionManager =
-        new TransactionManager()(this)
-
-    private[radon] val transactionClock = new time.TransactionClock
-
-    val retryLimit = 3000
-    val milisToWaitBeforeRetry = 1
-
-    type Transaction = net.fwbrasil.radon.transaction.Transaction
-
-    def transactional[A](f: => A): A =
-        transactional(transactionManager.getActiveTransaction, required)(f)
-
-    def transactional[A](propagation: net.fwbrasil.radon.transaction.Propagation)(f: => A): A =
-        transactional(transactionManager.getActiveTransaction, propagation)(f)
-
-    def transactional[A](pTransaction: net.fwbrasil.radon.transaction.Transaction)(f: => A): A =
-        transactional(Option(pTransaction))(f)
-
-    def transactional[A](pTransaction: Option[net.fwbrasil.radon.transaction.Transaction])(f: => A): A =
-        transactional(pTransaction, required)(f)
-
-    def transactional[A](pTransaction: net.fwbrasil.radon.transaction.Transaction, propagation: Propagation)(f: => A): A =
-        transactional(Option(pTransaction), propagation)(f)
-
-    def transactional[A](transaction: Option[net.fwbrasil.radon.transaction.Transaction], propagation: Propagation)(f: => A): A = {
-        val activeTransaction = transactionManager.getActiveTransaction
-        if (activeTransaction != None && activeTransaction != transaction)
-            throw new IllegalStateException("There is another active transaction!")
-        if (transaction.isDefined)
-            propagation.execute(transaction)(f)(this)
-        else
-            propagation.execute(transaction)(f)(this)
-    }
-
-    def transactionalWhile[A](cond: => Boolean)(f: => A): Unit = {
-        var continue: Boolean = true
-        while (continue) transactional {
-            continue = cond
-            if (continue) {
-                f
-            }
-        }
-    }
-
-    def retry(refs: Ref[_]*): Unit =
-        retry(refs.toList)
-
-    def retry(refs: List[Ref[_]]): Unit =
-        throw new ConcurrentTransactionException(refs)
-
-    def makeDurable(transaction: Transaction) = {
-
-    }
 }
