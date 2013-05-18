@@ -3,11 +3,17 @@ package net.fwbrasil.radon.transaction
 
 import scala.collection.JavaConversions.collectionAsScalaIterable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.util.Failure
+import scala.util.Success
 
 import net.fwbrasil.radon.ref.Ref
 import net.fwbrasil.radon.ref.RefContent
 import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
-import net.fwbrasil.radon.util.Lockable.lockall
+import net.fwbrasil.radon.util.SemaphoreLockable.lockall
 
 class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
         extends TransactionValidator
@@ -23,6 +29,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     private var refsReadOnly: ListBuffer[Ref[Any]] = _
     private var refsWrite: ListBuffer[Ref[Any]] = _
     private var snapshots: List[RefSnapshot] = _
+    private var readLocks: List[Ref[Any]] = _
+    private var writeLocks: List[Ref[Any]] = _
 
     def reads =
         refsRead
@@ -33,7 +41,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         else
             List()
 
-    protected def isReadOnly =
+    private def isReadOnly =
         !isRetryWithWrite && refsWrite.isEmpty
 
     private[radon] def put[T](ref: Ref[T], value: Option[T]) = {
@@ -62,6 +70,9 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     def commit(): Unit =
         commit(rollback = false)
 
+    def asyncCommit()(implicit ectx: ExecutionContext): Future[Unit] =
+        asyncCommit(rollback = false)
+
     private def updateReadsAndWrites = {
         import scala.collection.JavaConversions._
         val refsRead = new ListBuffer[Ref[Any]]()
@@ -84,55 +95,97 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         this.snapshots = snapshots
     }
 
-    private def commit(rollback: Boolean): Unit = {
-        updateReadsAndWrites
-        try {
-            val (readLockeds, readUnlockeds) = lockall(refsReadOnly, _.tryReadLock)
-            try {
-                val (writeLockeds, writeUnlockeds) = lockall(refsWrite, _.tryWriteLock)
-                try {
-
-                    startIfNotStarted
-
-                    try {
-                        retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds)
-                        retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds)
-
-                        refsReadOnly.foreach(e => {
-                            validateContext(e)
-                            validateConcurrentRefCreation(e)
-                        })
-
-                        refsRead.foreach(validateRead)
-
-                        refsWrite.foreach(e => {
-                            validateContext(e)
-                            validateConcurrentRefCreation(e)
-                            validateWrite(e)
-                        })
-
-                        if (!transient && !rollback)
-                            context.makeDurable(this)
-                    } catch {
-                        case e: Throwable =>
-                            prepareRollback
-                            throw e
-                    } finally {
-                        startIfNotStarted
-                        stop
-                        val snapshotsIterator = snapshots.iterator
-                        snapshots = List()
-                        snapshotsIterator.foreach(setRefContent)
-                    }
-                } finally
-                    writeLockeds.foreach(_.writeUnlock)
-            } finally
-                readLockeds.foreach(_.readUnlock)
-        } finally
-            clear
+    private def acquireLocks = {
+        val (readLockeds, readUnlockeds) = lockall(refsReadOnly, _.tryReadLock)
+        val (writeLockeds, writeUnlockeds) = lockall(refsWrite, _.tryWriteLock)
+        readLocks = readLockeds
+        writeLocks = writeLockeds
+        retryIfTrue(readUnlockeds.nonEmpty, readUnlockeds)
+        retryIfTrue(writeUnlockeds.nonEmpty, writeUnlockeds)
     }
 
-    private[this] def setRefContent(snapshot: RefSnapshot) = {
+    private def freeLocks = {
+        if (writeLocks != null)
+            writeLocks.foreach(_.writeUnlock)
+        if (readLocks != null)
+            readLocks.foreach(_.readUnlock)
+        writeLocks = null
+        readLocks = null
+    }
+
+    private def commit(rollback: Boolean): Unit = {
+        updateReadsAndWrites
+        startIfNotStarted
+        try {
+            acquireLocks
+            validateTransaction
+            if (!transient && !rollback)
+                context.makeDurable(this)
+        } catch {
+            case e: Throwable =>
+                prepareRollback
+                throw e
+        } finally
+            flushTransaction
+    }
+
+    private def asyncCommit(rollback: Boolean)(implicit ectx: ExecutionContext): Future[Unit] = {
+        updateReadsAndWrites
+        startIfNotStarted
+        try {
+            acquireLocks
+            validateTransaction
+        } catch {
+            case e: Throwable =>
+                prepareRollback
+                flushTransaction
+                throw e
+        }
+        val commitFuture =
+            if (!transient && !rollback)
+                context.makeDurableAsync(this)
+            else
+                Future()
+        commitFuture.andThen {
+            case Success(unit) =>
+                flushTransaction
+            case Failure(ex) =>
+                prepareRollback
+                flushTransaction
+                throw ex
+        }
+    }
+
+    private def flushTransaction = {
+        startIfNotStarted
+        stop
+        flushToMemory
+        freeLocks
+        clear
+    }
+
+    private def flushToMemory = {
+        val snapshotsIterator = snapshots.iterator
+        snapshots = List()
+        snapshotsIterator.foreach(setRefContent)
+    }
+
+    private def validateTransaction = {
+        refsReadOnly.foreach(e => {
+            validateContext(e)
+            validateConcurrentRefCreation(e)
+        })
+
+        refsRead.foreach(validateRead)
+
+        refsWrite.foreach(e => {
+            validateContext(e)
+            validateConcurrentRefCreation(e)
+            validateWrite(e)
+        })
+    }
+
+    private def setRefContent(snapshot: RefSnapshot) = {
         val ref = snapshot.ref
         val refContent = ref.refContent
         var value: Option[Any] = None
@@ -153,19 +206,19 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         ref.setRefContent(value, read, write, destroyedFlag)
     }
 
-    private[this] def valueAndDestroyedFlag(snapshot: RefSnapshot, refContent: RefContent[_]) =
+    private def valueAndDestroyedFlag(snapshot: RefSnapshot, refContent: RefContent[_]) =
         if (snapshot.isWrite && refContent.writeTimestamp < startTimestamp)
             (snapshot.value, snapshot.destroyedFlag)
         else
             (refContent.value, refContent.destroyedFlag)
 
-    private[this] def readTimestamp(isRefRead: Boolean, refContent: RefContent[_]) =
+    private def readTimestamp(isRefRead: Boolean, refContent: RefContent[_]) =
         if (isRefRead && refContent.readTimestamp < startTimestamp && !isReadOnly)
             startTimestamp
         else
             refContent.readTimestamp
 
-    private[this] def writeTimestamp(isRefWrite: Boolean, refContent: RefContent[_]) =
+    private def writeTimestamp(isRefWrite: Boolean, refContent: RefContent[_]) =
         if (isRefWrite && refContent.writeTimestamp < startTimestamp)
             endTimestamp
         else

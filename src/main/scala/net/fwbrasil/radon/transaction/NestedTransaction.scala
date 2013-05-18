@@ -3,6 +3,8 @@ package net.fwbrasil.radon.transaction
 import net.fwbrasil.radon.RequiredTransactionException
 import net.fwbrasil.radon.RadonContext
 import net.fwbrasil.radon.ref.Ref
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 final class NestedTransaction(val parent: Transaction)(override implicit val context: TransactionContext)
         extends Transaction()(context) {
@@ -33,6 +35,9 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
         }
         clear
     }
+    
+    override def asyncCommit()(implicit ectx: ExecutionContext) =  
+        Future(commit())
 
     private[radon] def rootTransaction: Transaction =
         parent match {

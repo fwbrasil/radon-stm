@@ -2,7 +2,9 @@ package net.fwbrasil.radon.transaction
 
 import net.fwbrasil.radon.ConcurrentTransactionException
 import net.fwbrasil.radon.ref.Ref
-
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
+import net.fwbrasil.radon.RetryLimitTransactionException
 
 trait TransactionContext extends PropagationContext {
 
@@ -40,7 +42,16 @@ trait TransactionContext extends PropagationContext {
         else
             propagation.execute(transaction)(f)(this)
     }
-    
+
+    def asyncTransactional[A](f: => A)(implicit ectx: ExecutionContext): Future[A] = {
+        val transaction = new Transaction()(this)
+        Future(transactional(transaction)(f))
+            .flatMap {
+                result =>
+                    transaction.asyncCommit.map(_ => result)
+            }
+    }
+
     def transactionalWhile[A](cond: => Boolean)(f: => A): Unit = {
         var continue: Boolean = true
         while (continue) transactional {
@@ -57,8 +68,9 @@ trait TransactionContext extends PropagationContext {
     def retry(refs: List[Ref[_]]): Unit =
         throw new ConcurrentTransactionException(refs)
 
-    def makeDurable(transaction: Transaction) = {
+    def makeDurableAsync(transaction: Transaction)(implicit ectx: ExecutionContext): Future[Unit] =
+        Future()
 
-    }
-    
+    def makeDurable(transaction: Transaction) = {}
+
 }

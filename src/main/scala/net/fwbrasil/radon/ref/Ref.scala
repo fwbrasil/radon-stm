@@ -8,6 +8,7 @@ import net.fwbrasil.radon.transaction.NestedTransaction
 import scala.collection.mutable.WeakHashMap
 import java.util.Collections
 import scala.collection.mutable.SynchronizedMap
+import net.fwbrasil.radon.util.SemaphoreLockable
 
 trait Source[+T] {
     def unary_! = get.getOrElse(null.asInstanceOf[T])
@@ -35,7 +36,7 @@ trait RefListener[T] {
 }
 
 class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context: TransactionContext)
-        extends Source[T] with Sink[T] with Lockable with java.io.Serializable {
+        extends Source[T] with Sink[T] with SemaphoreLockable with java.io.Serializable {
 
     import context.transactionManager._
 

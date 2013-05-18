@@ -5,6 +5,11 @@ import org.specs2.mutable._
 import net.fwbrasil.radon._
 import org.junit.runner._
 import org.specs2.runner._
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @RunWith(classOf[JUnitRunner])
 class DurableTransactionSpecs extends Specification {
@@ -13,9 +18,17 @@ class DurableTransactionSpecs extends Specification {
         var f: (Transaction) => Unit = _
         override def makeDurable(transaction: Transaction) =
             f(transaction)
+        override def makeDurableAsync(transaction: Transaction)(implicit ectx: ExecutionContext) =
+            Future(f(transaction))
     }
 
-    "Durable transaction" should {
+    "Durable transaction" should
+        test(_.commit)
+
+    "Async durable transaction" should
+        test(t => Await.result(t.asyncCommit, Duration.Inf))
+
+    def test(commitFunction: Transaction => Unit) = {
         "make durable writes" in {
             val ctx = new DurableTestContext
             import ctx._
@@ -29,7 +42,7 @@ class DurableTransactionSpecs extends Specification {
                     t must beEqualTo(transaction)
                     t.assignments must beEqualTo(List((ref, Some(100), false)))
                 }
-            transaction.commit
+            commitFunction(transaction)
             ok
         }
 
@@ -51,7 +64,7 @@ class DurableTransactionSpecs extends Specification {
                     t must beEqualTo(transaction)
                     t.assignments must beEmpty
                 }
-            transaction.commit
+            commitFunction(transaction)
             ok
         }
 
@@ -67,7 +80,7 @@ class DurableTransactionSpecs extends Specification {
                 (t: Transaction) => {
                     throw new IllegalStateException("don't make durable transient writes")
                 }
-            transaction.commit
+            commitFunction(transaction)
             ok
         }
 
@@ -83,7 +96,7 @@ class DurableTransactionSpecs extends Specification {
                 (t: Transaction) => {
                     throw new IllegalStateException("error in makeDurable")
                 }
-            transaction.commit must throwA[IllegalStateException]
+            commitFunction(transaction) must throwA[IllegalStateException]
             ctx.f = (t: Transaction) => {}
             transactional {
                 ref.isDestroyed must beTrue
@@ -120,13 +133,12 @@ class DurableTransactionSpecs extends Specification {
                 }
             ctx.f =
                 (t: Transaction) => {
-                    transactional(t) {
-                        transactional(t, nested) {
-                            throw new IllegalStateException
-                        }
+                    val nestedTransaction = new NestedTransaction(transaction)
+                    transactional(nestedTransaction) {
+                        throw new IllegalStateException
                     }
                 }
-            transaction.commit must throwA[IllegalStateException]
+            commitFunction(transaction) must throwA[IllegalStateException]
             ctx.f = (t: Transaction) => {}
             transactional {
                 ref.isDestroyed must beTrue
