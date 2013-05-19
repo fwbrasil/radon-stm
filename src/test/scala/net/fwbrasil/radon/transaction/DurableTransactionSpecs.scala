@@ -9,12 +9,12 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @RunWith(classOf[JUnitRunner])
 class DurableTransactionSpecs extends Specification {
 
     class DurableTestContext extends RadonContext {
+        import scala.concurrent.ExecutionContext.Implicits.global
         var f: (Transaction) => Unit = _
         override def makeDurable(transaction: Transaction) =
             f(transaction)
@@ -25,8 +25,30 @@ class DurableTransactionSpecs extends Specification {
     "Durable transaction" should
         test(_.commit)
 
-    "Async durable transaction" should
+    "Async durable transaction" should {
+
+        import scala.concurrent.ExecutionContext.Implicits.global
+        
+        "accept a transactional future chain" in {
+            val ctx = new DurableTestContext
+            ctx.f = (t: Transaction) => {}
+            import ctx._
+            val ref =
+                transactional {
+                    new Ref(100)
+                }
+            val f =
+                asyncTransactionalFuture {
+                    implicit ctx =>
+                        Future(!ref)(ctx)
+                }
+            val res = Await.result(f, Duration.Inf)
+            res === 100
+            ok
+        }
+
         test(t => Await.result(t.asyncCommit, Duration.Inf))
+    }
 
     def test(commitFunction: Transaction => Unit) = {
         "make durable writes" in {

@@ -43,13 +43,36 @@ trait TransactionContext extends PropagationContext {
             propagation.execute(transaction)(f)(this)
     }
 
+    class TransactionalExecutionContext(ectx: ExecutionContext) extends ExecutionContext {
+        val transaction = new Transaction()(TransactionContext.this)
+        override def execute(runnable: Runnable): Unit =
+            ectx.execute {
+                new Runnable {
+                    override def run =
+                        transactional(transaction) {
+                            runnable.run
+                        }
+                }
+            }
+        override def reportFailure(t: Throwable): Unit =
+            ectx.reportFailure(t)
+    }
+
     def asyncTransactional[A](f: => A)(implicit ectx: ExecutionContext): Future[A] = {
-        val transaction = new Transaction()(this)
+        val transaction = new Transaction()(TransactionContext.this)
         Future(transactional(transaction)(f))
             .flatMap {
                 result =>
                     transaction.asyncCommit.map(_ => result)
             }
+    }
+
+    def asyncTransactionalFuture[A](future: TransactionalExecutionContext => Future[A])(implicit ectx: ExecutionContext) = {
+        val ctx = new TransactionalExecutionContext(ectx)
+        future(ctx).flatMap {
+            result =>
+                ctx.transaction.asyncCommit.map(_ => result)
+        }
     }
 
     def transactionalWhile[A](cond: => Boolean)(f: => A): Unit = {
