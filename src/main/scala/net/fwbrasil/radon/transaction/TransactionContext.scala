@@ -16,6 +16,10 @@ trait TransactionContext extends PropagationContext {
     val retryLimit = 3000
     val milisToWaitBeforeRetry = 1
 
+    val executionContext = ExecutionContext.Implicits.global
+    
+    private[fwbrasil] implicit val ectx = executionContext
+
     type Transaction = net.fwbrasil.radon.transaction.Transaction
 
     def transactional[A](f: => A): A =
@@ -43,10 +47,10 @@ trait TransactionContext extends PropagationContext {
             propagation.execute(transaction)(f)(this)
     }
 
-    class TransactionalExecutionContext(ectx: ExecutionContext) extends ExecutionContext {
+    class TransactionalExecutionContext extends ExecutionContext {
         val transaction = new Transaction()(TransactionContext.this)
         override def execute(runnable: Runnable): Unit =
-            ectx.execute {
+            executionContext.execute {
                 new Runnable {
                     override def run =
                         transactional(transaction) {
@@ -55,10 +59,10 @@ trait TransactionContext extends PropagationContext {
                 }
             }
         override def reportFailure(t: Throwable): Unit =
-            ectx.reportFailure(t)
+            executionContext.reportFailure(t)
     }
 
-    def asyncTransactional[A](f: => A)(implicit ectx: ExecutionContext): Future[A] = {
+    def asyncTransactional[A](f: => A): Future[A] = {
         val transaction = new Transaction()(TransactionContext.this)
         Future(transactional(transaction)(f))
             .flatMap {
@@ -67,8 +71,8 @@ trait TransactionContext extends PropagationContext {
             }
     }
 
-    def asyncTransactionalFuture[A](future: TransactionalExecutionContext => Future[A])(implicit ectx: ExecutionContext) = {
-        val ctx = new TransactionalExecutionContext(ectx)
+    def asyncTransactionalFuture[A](future: TransactionalExecutionContext => Future[A]) = {
+        val ctx = new TransactionalExecutionContext
         future(ctx).flatMap {
             result =>
                 ctx.transaction.asyncCommit.map(_ => result)

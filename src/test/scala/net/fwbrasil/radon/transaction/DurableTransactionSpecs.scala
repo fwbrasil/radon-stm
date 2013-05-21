@@ -14,7 +14,6 @@ import scala.concurrent.duration.Duration
 class DurableTransactionSpecs extends Specification {
 
     class DurableTestContext extends RadonContext {
-        import scala.concurrent.ExecutionContext.Implicits.global
         var f: (Transaction) => Unit = _
         override def makeDurable(transaction: Transaction) =
             f(transaction)
