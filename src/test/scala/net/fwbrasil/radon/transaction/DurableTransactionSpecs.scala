@@ -27,7 +27,23 @@ class DurableTransactionSpecs extends Specification {
     "Async durable transaction" should {
 
         import scala.concurrent.ExecutionContext.Implicits.global
-        
+
+        "accept a transactional future" in {
+            val ctx = new DurableTestContext
+            ctx.f = (t: Transaction) => {}
+            import ctx._
+            val ref =
+                transactional {
+                    new Ref(100)
+                }
+            val f =
+                asyncTransactional {
+                    !ref
+                }
+            val res = Await.result(f, Duration.Inf)
+            res === 100
+        }
+
         "accept a transactional future chain" in {
             val ctx = new DurableTestContext
             ctx.f = (t: Transaction) => {}
@@ -37,13 +53,12 @@ class DurableTransactionSpecs extends Specification {
                     new Ref(100)
                 }
             val f =
-                asyncTransactionalFuture {
+                asyncTransactionalChain {
                     implicit ctx =>
                         Future(!ref)(ctx)
                 }
             val res = Await.result(f, Duration.Inf)
             res === 100
-            ok
         }
 
         test(t => Await.result(t.asyncCommit, Duration.Inf))

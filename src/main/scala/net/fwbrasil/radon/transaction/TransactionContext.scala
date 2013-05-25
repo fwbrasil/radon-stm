@@ -47,36 +47,12 @@ trait TransactionContext extends PropagationContext {
             propagation.execute(transaction)(f)(this)
     }
 
-    class TransactionalExecutionContext extends ExecutionContext {
-        val transaction = new Transaction()(TransactionContext.this)
-        override def execute(runnable: Runnable): Unit =
-            executionContext.execute {
-                new Runnable {
-                    override def run =
-                        transactional(transaction) {
-                            runnable.run
-                        }
-                }
-            }
-        override def reportFailure(t: Throwable): Unit =
-            executionContext.reportFailure(t)
-    }
+    def asyncTransactional[A](f: => A): Future[A] = 
+        asyncTransactionalChain(Future(f)(_))
 
-    def asyncTransactional[A](f: => A): Future[A] = {
-        val transaction = new Transaction()(TransactionContext.this)
-        Future(transactional(transaction)(f))
-            .flatMap {
-                result =>
-                    transaction.asyncCommit.map(_ => result)
-            }
-    }
-
-    def asyncTransactionalFuture[A](future: TransactionalExecutionContext => Future[A]) = {
-        val ctx = new TransactionalExecutionContext
-        future(ctx).flatMap {
-            result =>
-                ctx.transaction.asyncCommit.map(_ => result)
-        }
+    def asyncTransactionalChain[A](fFuture: TransactionalExecutionContext => Future[A]) = {
+        val ctx = new TransactionalExecutionContext()(this)
+        transactionManager.runInTransactionWithRetryAsync(fFuture(ctx), ctx)
     }
 
     def transactionalWhile[A](cond: => Boolean)(f: => A): Unit = {
@@ -101,3 +77,18 @@ trait TransactionContext extends PropagationContext {
     def makeDurable(transaction: Transaction) = {}
 
 }
+
+class TransactionalExecutionContext(implicit val ctx: TransactionContext) extends ExecutionContext {
+        val transaction = new Transaction
+        override def execute(runnable: Runnable): Unit =
+            ctx.executionContext.execute {
+                new Runnable {
+                    override def run =
+                        ctx.transactional(transaction) {
+                            runnable.run
+                        }
+                }
+            }
+        override def reportFailure(t: Throwable): Unit =
+            ctx.executionContext.reportFailure(t)
+    }

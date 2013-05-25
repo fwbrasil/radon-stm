@@ -11,6 +11,8 @@ import scala.annotation.tailrec
 import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 class TransactionManager(implicit val context: TransactionContext) {
 
@@ -66,10 +68,6 @@ class TransactionManager(implicit val context: TransactionContext) {
     private[radon] def runInNewTransactionWithRetry[A](f: => A): A =
         runInTransactionWithRetry(new Transaction, f)
 
-    protected def waitToRetry(e: ConcurrentTransactionException) =
-        if (context.milisToWaitBeforeRetry > 0)
-            Thread.sleep(context.milisToWaitBeforeRetry)
-
     @tailrec private[radon] final def runInTransactionWithRetry[A](
         transaction: Transaction, f: => A, retryCount: Int = 0): A = {
         if (retryCount >= context.retryLimit)
@@ -85,5 +83,30 @@ class TransactionManager(implicit val context: TransactionContext) {
                 runInTransactionWithRetry(transaction, f, retryCount + 1)
         }
     }
+
+    private[radon] def runInTransactionWithRetryAsync[A](
+        future: => Future[A],
+        ctx: TransactionalExecutionContext,
+        retryCount: Int = 0): Future[A] = {
+        implicit val ectx = ctx.ctx.executionContext
+        future
+            .flatMap {
+                result =>
+                    ctx.transaction.asyncCommit.map(_ => result)
+            }.recoverWith {
+                case e: ConcurrentTransactionException =>
+                    if (retryCount >= context.retryLimit)
+                        throw new RetryLimitTransactionException
+                    else {
+                        waitToRetry(e)
+                        ctx.transaction.isRetryWithWrite = e.retryWithWrite
+                        runInTransactionWithRetryAsync(future, ctx, retryCount + 1)
+                    }
+            }
+    }
+
+    protected def waitToRetry(e: ConcurrentTransactionException) =
+        if (context.milisToWaitBeforeRetry > 0)
+            Thread.sleep(context.milisToWaitBeforeRetry)
 
 }
