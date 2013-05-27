@@ -88,7 +88,7 @@ class TransactionManager(implicit val context: TransactionContext) {
         future: => Future[A],
         ctx: TransactionalExecutionContext,
         retryCount: Int = 0): Future[A] = {
-        implicit val ectx = ctx.ctx.executionContext
+        implicit val ectx = ctx.ctx.ectx
         future
             .flatMap {
                 result =>

@@ -16,7 +16,7 @@ trait TransactionContext extends PropagationContext {
     val retryLimit = 3000
     val milisToWaitBeforeRetry = 1
 
-    val executionContext = ExecutionContext.Implicits.global
+    def executionContext = ExecutionContext.Implicits.global
     
     private[fwbrasil] implicit val ectx = executionContext
 
@@ -81,7 +81,7 @@ trait TransactionContext extends PropagationContext {
 class TransactionalExecutionContext(implicit val ctx: TransactionContext) extends ExecutionContext {
         val transaction = new Transaction
         override def execute(runnable: Runnable): Unit =
-            ctx.executionContext.execute {
+            ctx.ectx.execute {
                 new Runnable {
                     override def run =
                         ctx.transactional(transaction) {
@@ -90,5 +90,5 @@ class TransactionalExecutionContext(implicit val ctx: TransactionContext) extend
                 }
             }
         override def reportFailure(t: Throwable): Unit =
-            ctx.executionContext.reportFailure(t)
+            ctx.ectx.reportFailure(t)
     }
