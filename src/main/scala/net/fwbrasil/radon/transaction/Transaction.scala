@@ -130,30 +130,25 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     }
 
     private def asyncCommit(rollback: Boolean)(implicit ectx: ExecutionContext): Future[Unit] = {
-        updateReadsAndWrites
-        startIfNotStarted
-        try {
+    	updateReadsAndWrites
+    	startIfNotStarted
+        Future {
             acquireLocks
             validateTransaction
-        } catch {
-            case e: Throwable =>
-                prepareRollback
-                flushTransaction
-                throw e
-        }
-        val commitFuture =
+        }.flatMap { _ =>
             if (!transient && !rollback)
                 context.makeDurableAsync(this)
             else
-                Future()
-        commitFuture.andThen {
-            case Success(unit) =>
-                flushTransaction
-            case Failure(ex) =>
-                prepareRollback
-                flushTransaction
-                throw ex
-        }
+                Future.successful()
+        }.transform(
+            {
+                _ => flushTransaction
+            }, {
+                e =>
+                    prepareRollback
+                    flushTransaction
+                    throw e
+            })
     }
 
     private def flushTransaction = {

@@ -17,7 +17,7 @@ trait TransactionContext extends PropagationContext {
     val milisToWaitBeforeRetry = 1
 
     def executionContext = ExecutionContext.Implicits.global
-    
+
     private[fwbrasil] implicit val ectx = executionContext
 
     type Transaction = net.fwbrasil.radon.transaction.Transaction
@@ -47,7 +47,7 @@ trait TransactionContext extends PropagationContext {
             propagation.execute(transaction)(f)(this)
     }
 
-    def asyncTransactional[A](f: => A): Future[A] = 
+    def asyncTransactional[A](f: => A): Future[A] =
         asyncTransactionalChain(Future(f)(_))
 
     def asyncTransactionalChain[A](fFuture: TransactionalExecutionContext => Future[A]) = {
@@ -79,16 +79,18 @@ trait TransactionContext extends PropagationContext {
 }
 
 class TransactionalExecutionContext(implicit val ctx: TransactionContext) extends ExecutionContext {
-        val transaction = new Transaction
-        override def execute(runnable: Runnable): Unit =
+    val transaction = new Transaction
+    override def execute(runnable: Runnable): Unit =
             ctx.ectx.execute {
                 new Runnable {
                     override def run =
-                        ctx.transactional(transaction) {
+                        transactional {
                             runnable.run
                         }
                 }
             }
-        override def reportFailure(t: Throwable): Unit =
-            ctx.ectx.reportFailure(t)
-    }
+    def transactional[R](f: => R) =
+        ctx.transactional(transaction)(f)
+    override def reportFailure(t: Throwable): Unit =
+        ctx.ectx.reportFailure(t)
+}

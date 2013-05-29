@@ -5,9 +5,7 @@ import scala.collection._
 trait ExclusiveThreadLocalItem {
     private[util] var boundThread: Option[Thread] = None
     private[util] def setBoundThread(thread: Option[Thread]) =
-        this.synchronized {
-            boundThread = thread
-        }
+        boundThread = thread
 }
 
 class ExclusiveThreadLocal[T <: ExclusiveThreadLocalItem] {
@@ -24,13 +22,16 @@ class ExclusiveThreadLocal[T <: ExclusiveThreadLocalItem] {
 
     def set(value: Option[T]) = {
         require(value != null && value.isDefined)
+        val item = value.get
         val currentThread = Thread.currentThread
-        val actualBoundThread = value.get.boundThread
-        if (actualBoundThread != None && currentThread != actualBoundThread.get)
-            throw new IllegalStateException(
-                "ExclusiveThreadLocal: value is bound to another thread.")
-        underlying.set(value)
-        value.get.setBoundThread(Some(currentThread))
+        item.synchronized {
+            val actualBoundThread = item.boundThread
+            if (actualBoundThread != None && currentThread != actualBoundThread.get)
+                throw new IllegalStateException(
+                    "ExclusiveThreadLocal: value is bound to another thread.")
+            underlying.set(value)
+            item.setBoundThread(Some(currentThread))
+        }
     }
 
     def clean(value: Option[T]) = {

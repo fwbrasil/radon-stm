@@ -37,7 +37,7 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
     }
     
     override def asyncCommit()(implicit ectx: ExecutionContext) =  
-        Future(commit())
+        Future.successful(commit())
 
     private[radon] def rootTransaction: Transaction =
         parent match {

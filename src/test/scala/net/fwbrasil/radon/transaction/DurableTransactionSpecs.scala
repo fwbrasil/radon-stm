@@ -38,7 +38,7 @@ class DurableTransactionSpecs extends Specification {
                 }
             val f =
                 asyncTransactional {
-                    !ref
+                   !ref
                 }
             val res = Await.result(f, Duration.Inf)
             res === 100
