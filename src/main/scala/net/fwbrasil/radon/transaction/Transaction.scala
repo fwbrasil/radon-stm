@@ -23,6 +23,8 @@ class RefSnapshot(val ref: Ref[Any]) {
 }
 
 abstract class RefSnapshooter extends TransactionStopWatch {
+    
+    val transactionId = System.identityHashCode(this)
 
     private[transaction] var refsSnapshot = new IdentityHashMap[Ref[Any], RefSnapshot]()
 
@@ -103,13 +105,7 @@ abstract class TransactionValidator extends RefSnapshooter {
         ref.refContent.readTimestamp > startTimestamp
 
     private[this] def isRefCreatingInAnotherTransaction(ref: Ref[Any]) =
-        ref.isCreating && ref.creationTransaction != this &&
-            (ref.creationTransaction match {
-                case nested: NestedTransaction =>
-                    nested.rootTransaction == this
-                case normal =>
-                    false
-            })
+        ref.isCreating && ref.creationTransactionId != transactionId
 
     private[this] def isRefWroteAfterTheStartOfTransaction(ref: Ref[Any]) =
         ref.refContent.writeTimestamp > startTimestamp
@@ -261,7 +257,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             readTimestamp(snapshot.isRead, refContent)
         val write =
             writeTimestamp(snapshot.isWrite, refContent)
-        require(((ref.creationTransaction != this || write != 0) &&
+        require(((ref.creationTransactionId != transactionId || write != 0) &&
             write != Long.MaxValue) || transient)
         ref.setRefContent(value, read, write, destroyedFlag)
     }
@@ -291,7 +287,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             else
                 new ListBuffer[Ref[Any]]()
         val refsCreated =
-            refsWrote.filter(_.creationTransaction == this)
+            refsWrote.filter(_.creationTransactionId == transactionId)
         clear
         for (ref <- refsCreated)
             destroy(ref)
