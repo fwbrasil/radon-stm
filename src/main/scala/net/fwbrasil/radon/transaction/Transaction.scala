@@ -20,7 +20,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         with ExclusiveThreadLocalItem {
 
     def this()(implicit context: TransactionContext) = this(false)
-
+    
     import context._
 
     private[radon] var isRetryWithWrite = false
@@ -196,7 +196,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             readTimestamp(snapshot.isRead, refContent)
         val write =
             writeTimestamp(snapshot.isWrite, refContent)
-        require(((ref.creationTransaction != this || write != 0) &&
+        require(((ref.creationTransactionId != transactionId || write != 0) &&
             write != Long.MaxValue) || transient)
         ref.setRefContent(value, read, write, destroyedFlag)
     }
@@ -226,7 +226,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             else
                 new ListBuffer[Ref[Any]]()
         val refsCreated =
-            refsWrote.filter(_.creationTransaction == this)
+            refsWrote.filter(_.creationTransactionId == transactionId)
         clear
         for (ref <- refsCreated)
             destroy(ref)

@@ -58,13 +58,16 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
     }
 
     @transient
-    private[radon] val creationTransaction =
-        getRequiredTransaction match {
+    private[radon] val (creationTransactionId, creationTransactionIsTransient)  = {
+        val transaction = 
+            getRequiredTransaction match {
             case nested: NestedTransaction =>
                 nested.rootTransaction
             case normal =>
                 normal
         }
+        (transaction.transactionId, transaction.transient)
+    }
 
     def getRequiredTransaction =
         getRequiredActiveTransaction
@@ -99,8 +102,8 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
     private[radon] def destroyedFlag = refContent.destroyedFlag
     private[radon] def isCreating =
         writeTimestamp == 0 &&
-            creationTransaction != null &&
-            !creationTransaction.transient
+            creationTransactionId != 0 &&
+            !creationTransactionIsTransient
 
     def get: Option[T] = {
         val result = getRequiredTransaction.get(this)
