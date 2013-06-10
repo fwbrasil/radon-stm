@@ -81,16 +81,18 @@ trait TransactionContext extends PropagationContext {
 class TransactionalExecutionContext(implicit val ctx: TransactionContext) extends ExecutionContext {
     val transaction = new Transaction
     override def execute(runnable: Runnable): Unit =
-            ctx.ectx.execute {
-                new Runnable {
-                    override def run =
-                        transactional {
-                            runnable.run
-                        }
-                }
+        ctx.ectx.execute {
+            new Runnable {
+                override def run =
+                    transactional {
+                        runnable.run
+                    }
             }
+        }
     def transactional[R](f: => R) =
-        ctx.transactional(transaction)(f)
+        transaction.synchronized {
+            ctx.transactional(transaction)(f)
+        }
     override def reportFailure(t: Throwable): Unit =
         ctx.ectx.reportFailure(t)
 }
