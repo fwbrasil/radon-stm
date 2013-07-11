@@ -159,15 +159,39 @@ class TransactionValidatorSpecs extends Specification {
         }
 
         "validate destroyed refs" in {
-            "during transaction" in {
+
+            "on commit" in {
+                val ref = transactional(new Ref(10))
+                transactional(ref.destroy)
                 transactional {
-                    val ref = new Ref(10)
-                    ref := 200
+                    ref.get
+                } must throwA[IllegalStateException]
+            }
+
+            "ref born dead" in {
+                val ref =
+                    transactional {
+                        val ref = new Ref(10)
+                        ref.destroy
+                        ref
+                    }
+                transactional {
+                    ref.get
+                } must throwA[IllegalStateException]
+            }
+
+            "concurrent transactions" in {
+                val ref = transactional(new Ref(10))
+                val t1 = new Transaction
+                val t2 = new Transaction
+                transactional(t1) {
                     ref.destroy
-                    !ref must throwA[IllegalStateException]
-                    (ref := 300) must throwA[IllegalStateException]
-                    ref.destroy must throwA[IllegalStateException]
                 }
+                transactional(t2) {
+                    ref.destroy
+                }
+                t1.commit
+                t2.commit must throwA[ConcurrentTransactionException]
             }
 
         }

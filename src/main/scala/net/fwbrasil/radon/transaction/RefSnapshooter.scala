@@ -13,7 +13,7 @@ class RefSnapshot(val ref: Ref[Any]) {
 }
 
 abstract class RefSnapshooter extends TransactionStopWatch {
-    
+
     val transactionId = System.identityHashCode(this)
 
     private[transaction] var refsSnapshot = new IdentityHashMap[Ref[Any], RefSnapshot]()
@@ -22,19 +22,14 @@ abstract class RefSnapshooter extends TransactionStopWatch {
         getSnapshot(ref, true)
 
     protected def getSnapshot(ref: Ref[Any], validateDestroyed: Boolean): RefSnapshot = {
-        if (validateDestroyed)
-            startIfNotStarted
+        startIfNotStarted
         val snapOrNull = refsSnapshot.get(ref)
-        val snap =
-            if (snapOrNull == null) {
-                val newSnap = new RefSnapshot(ref)
-                refsSnapshot.put(ref, newSnap)
-                newSnap
-            } else
-                snapOrNull
-        if (validateDestroyed)
-            validateIfDestroyed(snap)
-        snap
+        if (snapOrNull == null) {
+            val newSnap = new RefSnapshot(ref)
+            refsSnapshot.put(ref, newSnap)
+            newSnap
+        } else
+            snapOrNull
     }
 
     protected def snapshotRead(ref: Ref[Any]): Option[Any] = {

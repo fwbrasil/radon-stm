@@ -171,11 +171,15 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             validateConcurrentRefCreation(e)
         })
 
-        refsRead.foreach(validateRead)
+        refsRead.foreach{e =>
+            validateDestroyed(e)
+            validateRead(e)
+        }
 
         refsWrite.foreach(e => {
             validateContext(e)
             validateConcurrentRefCreation(e)
+            validateDestroyed(e)
             validateWrite(e)
         })
     }

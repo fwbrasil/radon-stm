@@ -12,15 +12,21 @@ abstract class TransactionValidator extends RefSnapshooter {
 
     protected def validateWrite(ref: Ref[Any]) =
         retryIfTrue(
-            isRefReadAfterTheStartOfTransaction(ref) ||
-                isRefDestroyedAfterTheStartOfTransaction(ref),
+            isRefReadAfterTheStartOfTransaction(ref),
             List(ref))
 
     protected def validateRead(ref: Ref[Any]) =
         retryIfTrue(
-            (isRefWroteAfterTheStartOfTransaction(ref) ||
-                isAnOutdatedSnapshot(ref, getSnapshot(ref, false))),
+            isRefWroteAfterTheStartOfTransaction(ref) ||
+                isAnOutdatedSnapshot(ref, getSnapshot(ref, false)),
             List(ref))
+
+    protected def validateDestroyed(ref: Ref[Any]) = 
+        if (ref.refContent.destroyedFlag) 
+            if (isRefWroteAfterTheStartOfTransaction(ref))
+                context.retry(ref)
+            else
+                throw new IllegalStateException("A destroyed ref was used.")
 
     protected def validateContext(ref: Ref[Any]) =
         if (ref.context != context)
@@ -39,9 +45,10 @@ abstract class TransactionValidator extends RefSnapshooter {
         ref.refContent.writeTimestamp > startTimestamp
 
     private[this] def isRefDestroyedAfterTheStartOfTransaction(ref: Ref[Any]) =
-        isRefWroteAfterTheStartOfTransaction(ref) && ref.destroyedFlag
+        //        isRefWroteAfterTheStartOfTransaction(ref) && 
+        ref.destroyedFlag
 
-    protected def retryIfTrue(condition: Boolean, refs: => List[Ref[_]])(implicit ctx: TransactionContext) =
+    protected def retryIfTrue(condition: Boolean, refs: => List[Ref[_]]) =
         if (condition)
-            ctx.retry(refs)
+            context.retry(refs)
 }
