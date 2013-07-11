@@ -58,14 +58,14 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
     }
 
     @transient
-    private[radon] val (creationTransactionId, creationTransactionIsTransient)  = {
-        val transaction = 
+    private[radon] val (creationTransactionId, creationTransactionIsTransient) = {
+        val transaction =
             getRequiredTransaction match {
-            case nested: NestedTransaction =>
-                nested.rootTransaction
-            case normal =>
-                normal
-        }
+                case nested: NestedTransaction =>
+                    nested.rootTransaction
+                case normal =>
+                    normal
+            }
         (transaction.transactionId, transaction.transient)
     }
 
@@ -146,6 +146,12 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 
     def addWeakListener(listener: RefListener[T]) =
         weakListenersMap += (listener -> listener.hashCode())
+
+    protected def snapshot =
+        if (getTransaction.isDefined)
+            get
+        else
+            _refContent.value
 
     protected def toStringSnapshot =
         if (getTransaction.isDefined) {
