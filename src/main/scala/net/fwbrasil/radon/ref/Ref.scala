@@ -147,7 +147,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
     def addWeakListener(listener: RefListener[T]) =
         weakListenersMap += (listener -> listener.hashCode())
 
-    protected def snapshot =
+    protected def toStringSnapshot =
         if (getTransaction.isDefined) {
             if (!isDestroyed)
                 get
@@ -159,7 +159,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
             Option("destroyed")
 
     override def toString =
-        "Ref(" + snapshot + ")"
+        "Ref(" + toStringSnapshot + ")"
 }
 
 object Ref {
