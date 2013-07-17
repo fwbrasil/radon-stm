@@ -180,7 +180,7 @@ class TransactionValidatorSpecs extends Specification {
                 } must throwA[IllegalStateException]
             }
 
-            "concurrent transactions" in {
+            "concurrent transactions with retry" in {
                 val ref = transactional(new Ref(10))
                 val t1 = new Transaction
                 val t2 = new Transaction
@@ -192,6 +192,54 @@ class TransactionValidatorSpecs extends Specification {
                 }
                 t1.commit
                 t2.commit must throwA[ConcurrentTransactionException]
+                transactional(t2) {
+                    ref.destroy
+                }
+                t2.commit must throwA[IllegalStateException]
+            }
+
+            "do not allow access to a destroyed ref" in {
+                val ref = transactional(new Ref(0))
+                transactional(ref.destroy)
+                transactional(ref.isDestroyed must beTrue)
+                transactional(ref.destroy) must throwA[IllegalStateException]
+            }
+
+            "concurrent threads" in {
+                new ActorDsl with ManyActors with OneActorPerThread {
+                    override lazy val actorsPoolSize = 100
+                    val ref =
+                        inMainActor {
+                            transactional {
+                                new Ref(1)
+                            }
+                        }
+                    inParallelActors {
+                        transactional {
+                            if (!ref.isDestroyed)
+                                ref.destroy
+                        }
+                    }
+                }
+                ok
+            }
+
+            "concurrent threads illegal destroy" in {
+                new ActorDsl with ManyActors with OneActorPerThread {
+                    override lazy val actorsPoolSize = 100
+                    val ref =
+                        inMainActor {
+                            transactional {
+                                new Ref(1)
+                            }
+                        }
+                    inParallelActors {
+                        transactional {
+                            ref.destroy
+                        }
+                    } must throwA[IllegalStateException]
+                }
+                ok
             }
 
         }
