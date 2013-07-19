@@ -99,7 +99,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 
     private[radon] def readTimestamp = refContent.readTimestamp
     private[radon] def writeTimestamp = refContent.writeTimestamp
-    private[radon] def destroyedFlag = refContent.destroyedFlag
+
     private[radon] def isCreating =
         writeTimestamp == 0 &&
             creationTransactionId != 0 &&
@@ -166,11 +166,6 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
 
     override def toString =
         "Ref(" + toStringSnapshot + ")"
-}
-
-object Ref {
-    def apply[T](value: T)(implicit context: TransactionContext) = new Ref(value)
-    def apply[T](implicit context: TransactionContext) = new Ref
 }
 
 case class RefContent[T](

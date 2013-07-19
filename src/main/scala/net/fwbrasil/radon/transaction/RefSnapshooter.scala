@@ -50,10 +50,6 @@ abstract class RefSnapshooter extends TransactionStopWatch {
         snap.isWrite = true
     }
 
-    private def validateIfDestroyed(snapshot: RefSnapshot) =
-        if (snapshot.destroyedFlag)
-            throw new IllegalStateException("Triyng to access a destroyed ref.")
-
     private[transaction] def clearSnapshots =
         refsSnapshot.clear
 }

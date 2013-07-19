@@ -44,10 +44,6 @@ abstract class TransactionValidator extends RefSnapshooter {
     private[this] def isRefWroteAfterTheStartOfTransaction(ref: Ref[Any]) =
         ref.refContent.writeTimestamp > startTimestamp
 
-    private[this] def isRefDestroyedAfterTheStartOfTransaction(ref: Ref[Any]) =
-        //        isRefWroteAfterTheStartOfTransaction(ref) && 
-        ref.destroyedFlag
-
     protected def retryIfTrue(condition: Boolean, refs: => List[Ref[_]]) =
         if (condition)
             context.retry(refs)

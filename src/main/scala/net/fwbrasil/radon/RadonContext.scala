@@ -18,5 +18,3 @@ class RetryWithWriteTransactionException(refs: List[Ref[_]]) extends ConcurrentT
 class RetryLimitTransactionException extends Exception
 class RequiredTransactionException extends Exception
 class NotSupportedTransactionException extends Exception
-class InvalidTransactionException extends Exception
-class TransactionIsNotThradSafeException extends Exception

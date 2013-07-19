@@ -205,12 +205,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         ref.setRefContent(value, read, write, destroyedFlag)
     }
 
-    private def valueAndDestroyedFlag(snapshot: RefSnapshot, refContent: RefContent[_]) =
-        if (snapshot.isWrite && refContent.writeTimestamp < startTimestamp)
-            (snapshot.value, snapshot.destroyedFlag)
-        else
-            (refContent.value, refContent.destroyedFlag)
-
     private def readTimestamp(isRefRead: Boolean, refContent: RefContent[_]) =
         if (isRefRead && refContent.readTimestamp < startTimestamp && !isReadOnly)
             startTimestamp
