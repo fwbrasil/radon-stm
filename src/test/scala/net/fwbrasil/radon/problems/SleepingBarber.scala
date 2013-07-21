@@ -27,7 +27,7 @@ class SleepingBarber extends Specification {
 
     class Chair extends Ref[Customer] {
         def isEmpty =
-            super.get == None
+            super.get.isEmpty
         def sitDown(customer: Customer) = {
             if (!isEmpty)
                 throw new IllegalStateException("Chair is not empty!")

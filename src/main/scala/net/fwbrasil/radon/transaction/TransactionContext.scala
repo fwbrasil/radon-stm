@@ -39,7 +39,7 @@ trait TransactionContext extends PropagationContext {
 
     def transactional[A](transaction: Option[net.fwbrasil.radon.transaction.Transaction], propagation: Propagation)(f: => A): A = {
         val activeTransaction = transactionManager.getActiveTransaction
-        if (activeTransaction != None && activeTransaction != transaction)
+        if (activeTransaction.isDefined && activeTransaction != transaction)
             throw new IllegalStateException("There is another active transaction!")
         if (transaction.isDefined)
             propagation.execute(transaction)(f)(this)

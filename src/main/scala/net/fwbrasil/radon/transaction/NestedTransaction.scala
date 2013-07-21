@@ -59,7 +59,7 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
 class Nested extends Propagation {
     private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit ctx: TransactionContext): A = {
         import ctx.transactionManager._
-        if (transaction == None)
+        if (transaction.isEmpty)
             throw new RequiredTransactionException
         deactivate(transaction)
         try {

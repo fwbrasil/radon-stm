@@ -15,7 +15,7 @@ trait Propagation {
 class Required extends Propagation {
     private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
         import context.transactionManager._
-        if (transaction != None) {
+        if (transaction.isDefined) {
             val wasActive = isActive(transaction)
             try {
                 runInTransaction(transaction.get)(f)
@@ -36,7 +36,7 @@ class Required extends Propagation {
 class Mandatory extends Propagation {
     private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
         import context.transactionManager._
-        if (transaction == None)
+        if (transaction.isEmpty)
             throw new RequiredTransactionException
         val wasActive = isActive(transaction)
         try {
@@ -56,7 +56,7 @@ class Mandatory extends Propagation {
 class Never extends Propagation {
     private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
         import context.transactionManager._
-        if (transaction != None || getActiveTransaction != None)
+        if (transaction.isDefined || getActiveTransaction.isDefined)
             throw new NotSupportedTransactionException
         f
     }
@@ -110,7 +110,7 @@ class RequiresNew extends Propagation {
 class Supports extends Propagation {
     private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit context: TransactionContext): A = {
         import context.transactionManager._
-        if (transaction != None)
+        if (transaction.isDefined)
             runInTransaction(transaction.get)(f)
         else
             f

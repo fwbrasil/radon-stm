@@ -6,7 +6,6 @@ import net.fwbrasil.radon.RequiredTransactionException
 import net.fwbrasil.radon.RetryWithWriteTransactionException
 import net.fwbrasil.radon.ConcurrentTransactionException
 import net.fwbrasil.radon.util.ExclusiveThreadLocal
-import net.fwbrasil.radon.util.Debug
 import scala.annotation.tailrec
 import scala.util.Try
 import scala.util.Failure
@@ -20,11 +19,11 @@ class TransactionManager(implicit val context: TransactionContext) {
         new ExclusiveThreadLocal[Transaction]
 
     private[radon] def isActive(transaction: Option[Transaction]) =
-        getActiveTransaction != None && getActiveTransaction == transaction
+        getActiveTransaction.isDefined && getActiveTransaction == transaction
 
     private[radon] def activate(transaction: Option[Transaction]) = {
         val active = getActiveTransaction
-        if ((getActiveTransaction != None || transaction == None)
+        if ((getActiveTransaction.isDefined || transaction.isEmpty)
             && getActiveTransaction != transaction)
             throw new IllegalStateException("Another transaction is active.")
         activeTransactionThreadLocal.set(transaction)
@@ -39,7 +38,7 @@ class TransactionManager(implicit val context: TransactionContext) {
 
     private[fwbrasil] def getRequiredActiveTransaction: Transaction = {
         val active = getActiveTransaction
-        if (active != None)
+        if (active.isDefined)
             active.get
         else
             throw new RequiredTransactionException

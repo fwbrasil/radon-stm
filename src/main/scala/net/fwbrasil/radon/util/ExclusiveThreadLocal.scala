@@ -26,7 +26,7 @@ class ExclusiveThreadLocal[T <: ExclusiveThreadLocalItem] {
         val currentThread = Thread.currentThread
         item.synchronized {
             val actualBoundThread = item.boundThread
-            if (actualBoundThread != None && currentThread != actualBoundThread.get)
+            if (actualBoundThread.isDefined && currentThread != actualBoundThread.get)
                 throw new IllegalStateException(
                     "ExclusiveThreadLocal: value is bound to another thread.")
             underlying.set(value)
