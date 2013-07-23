@@ -118,7 +118,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         startIfNotStarted
         try {
             acquireLocks
-            validateTransaction
+            validateTransaction(rollback)
             if (!transient && !rollback)
                 context.makeDurable(this)
         } catch {
@@ -134,7 +134,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     	startIfNotStarted
         Future {
             acquireLocks
-            validateTransaction
+            validateTransaction(rollback)
         }.flatMap { _ =>
             if (!transient && !rollback)
                 context.makeDurableAsync(this)
@@ -165,10 +165,11 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         snapshotsIterator.foreach(setRefContent)
     }
 
-    private def validateTransaction = {
+    private def validateTransaction(rollback: Boolean) = {
         refsReadOnly.foreach(e => {
             validateContext(e)
-            validateConcurrentRefCreation(e)
+            if(!rollback)
+                validateConcurrentRefCreation(e)
         })
 
         refsRead.foreach{e =>
@@ -178,7 +179,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
         refsWrite.foreach(e => {
             validateContext(e)
-            validateConcurrentRefCreation(e)
+            if(!rollback) 
+                validateConcurrentRefCreation(e)
             validateWrite(e)
             validateDestroyed(e)
         })
@@ -200,8 +202,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             readTimestamp(snapshot.isRead, refContent)
         val write =
             writeTimestamp(snapshot.isWrite, refContent)
-        require(((ref.creationTransactionId != transactionId || write != 0) &&
-            write != Long.MaxValue) || transient)
         ref.setRefContent(value, read, write, destroyedFlag)
     }
 
@@ -224,7 +224,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             else
                 new ListBuffer[Ref[Any]]()
         val refsCreated =
-            refsWrote.filter(_.creationTransactionId == transactionId)
+            refsWrote.filter(_.creationTransactionId == startTimestamp)
         clear
         for (ref <- refsCreated)
             destroy(ref)

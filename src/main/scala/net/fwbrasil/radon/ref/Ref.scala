@@ -57,6 +57,15 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
         _weakListenersMap
     }
 
+    def getRequiredTransaction =
+        getRequiredActiveTransaction
+
+    def getTransaction =
+        getActiveTransaction
+
+    if (initialize)
+        put(pValueOption, getRequiredTransaction)
+        
     @transient
     private[radon] val (creationTransactionId, creationTransactionIsTransient) = {
         val transaction =
@@ -66,17 +75,8 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
                 case normal =>
                     normal
             }
-        (transaction.transactionId, transaction.transient)
+        (transaction.startTimestamp, transaction.transient)
     }
-
-    def getRequiredTransaction =
-        getRequiredActiveTransaction
-
-    def getTransaction =
-        getActiveTransaction
-
-    if (initialize)
-        put(pValueOption, getRequiredTransaction)
 
     def refContent =
         _refContent

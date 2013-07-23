@@ -71,7 +71,7 @@ class RefSpecs extends Specification {
                 transactional(transaction) {
                     new Ref(100)
                 }
-            ref.creationTransactionId must beEqualTo(transaction.transactionId)
+            ref.creationTransactionId must beEqualTo(transaction.startTimestamp)
         }
         "detect if it is creating" in transactional {
             val ref = new Ref(100)

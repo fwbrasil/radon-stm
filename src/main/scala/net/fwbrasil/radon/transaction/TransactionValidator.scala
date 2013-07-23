@@ -39,7 +39,7 @@ abstract class TransactionValidator extends RefSnapshooter {
         ref.refContent.readTimestamp > startTimestamp
 
     private[this] def isRefCreatingInAnotherTransaction(ref: Ref[Any]) =
-        ref.isCreating && ref.creationTransactionId != transactionId
+        ref.isCreating && ref.creationTransactionId != startTimestamp
 
     private[this] def isRefWroteAfterTheStartOfTransaction(ref: Ref[Any]) =
         ref.refContent.writeTimestamp > startTimestamp
