@@ -9,11 +9,11 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
-
 import net.fwbrasil.radon.ref.Ref
 import net.fwbrasil.radon.ref.RefContent
 import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
 import net.fwbrasil.radon.util.SemaphoreLockable.lockall
+import java.util.concurrent.atomic.AtomicLong
 
 class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
         extends TransactionValidator
@@ -246,4 +246,9 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         clearStopWatch
     }
 
+}
+
+object Transaction {
+    private val lastId = new AtomicLong(0)
+    def nextId = lastId.incrementAndGet
 }

@@ -14,7 +14,7 @@ class RefSnapshot(val ref: Ref[Any]) {
 
 abstract class RefSnapshooter extends TransactionStopWatch {
 
-    val transactionId = System.identityHashCode(this)
+    val transactionId = Transaction.nextId
 
     private[transaction] var refsSnapshot = new IdentityHashMap[Ref[Any], RefSnapshot]()
 
