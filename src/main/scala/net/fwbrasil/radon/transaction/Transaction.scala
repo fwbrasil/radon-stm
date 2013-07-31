@@ -20,7 +20,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         with ExclusiveThreadLocalItem {
 
     def this()(implicit context: TransactionContext) = this(false)
-    
+
     import context._
 
     private[radon] var isRetryWithWrite = false
@@ -31,6 +31,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     private var snapshots: List[RefSnapshot] = _
     private var readLocks: List[Ref[Any]] = _
     private var writeLocks: List[Ref[Any]] = _
+    var attachments = ListBuffer[Any]()
 
     def reads =
         refsRead
@@ -130,8 +131,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     }
 
     private def asyncCommit(rollback: Boolean)(implicit ectx: ExecutionContext): Future[Unit] = {
-    	updateReadsAndWrites
-    	startIfNotStarted
+        updateReadsAndWrites
+        startIfNotStarted
         Future {
             acquireLocks
             validateTransaction
@@ -171,7 +172,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             validateConcurrentRefCreation(e)
         })
 
-        refsRead.foreach{e =>
+        refsRead.foreach { e =>
             validateRead(e)
             validateDestroyed(e)
         }
@@ -242,6 +243,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     private[transaction] def clear = {
         refsRead = null
         refsWrite = null
+        attachments.clear
         clearSnapshots
         clearStopWatch
     }
