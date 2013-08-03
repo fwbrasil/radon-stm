@@ -185,28 +185,6 @@ class TransactionManagerSpecs extends Specification {
                 transaction.startTimestamp must beEqualTo(0)
                 manager.getActiveTransaction must beNone
             }
-            "RetryWithWriteTransactionException" in {
-                val manager = new TransactionManager()
-                val transaction = new Transaction
-                val ref =
-                    transactional {
-                        new Ref(100)
-                    }
-                manager.runInTransactionWithRetry(transaction, {
-                    manager.getRequiredActiveTransaction must beEqualTo(transaction)
-                    transactional {
-                        ref := 200
-                    }
-                    if (!transaction.isRetryWithWrite)
-                        throw new RetryWithWriteTransactionException(List())
-                    1
-                }) must beEqualTo(1)
-                transactional {
-                    !ref
-                } must beEqualTo(200)
-                transaction.startTimestamp must beEqualTo(0)
-                manager.getActiveTransaction must beNone
-            }
         }
     }
 

@@ -7,14 +7,10 @@ trait RadonContext
         extends ref.RefContext
         with transaction.TransactionContext {
     implicit val context = this
+    override val milisToWaitBeforeRetry = 1
 }
 
-class ConcurrentTransactionException(val refs: List[Ref[_]]) extends Exception {
-    def retryWithWrite = false
-}
-class RetryWithWriteTransactionException(refs: List[Ref[_]]) extends ConcurrentTransactionException(refs) {
-    override def retryWithWrite = true
-}
+class ConcurrentTransactionException(val refs: List[Ref[_]]) extends Exception
 class RetryLimitTransactionException extends Exception
 class RequiredTransactionException extends Exception
 class NotSupportedTransactionException extends Exception

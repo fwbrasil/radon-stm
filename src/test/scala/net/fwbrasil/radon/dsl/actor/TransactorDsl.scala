@@ -5,7 +5,6 @@ import net.fwbrasil.radon.transaction.TransactionContext
 abstract class TransactorMessage[A]() extends ActorMessage[A]
 case class CommitMessage() extends TransactorMessage[Unit]
 case class RollbackMessage() extends TransactorMessage[Unit]
-case class MarkTransactionNotReadOnlyMessage() extends TransactorMessage[Unit]
 case class StartTransactionIfNotStartedMessage() extends TransactorMessage[Unit]
 
 class ExecutorTransactor(override val oneActorPerThread: Boolean)(implicit context: TransactionContext) extends ExecutorActor(oneActorPerThread) {
@@ -27,8 +26,6 @@ class ExecutorTransactor(override val oneActorPerThread: Boolean)(implicit conte
                 processWithReply(transaction.rollback)
             case start: StartTransactionIfNotStartedMessage =>
                 processWithReply(transaction.startIfNotStarted)
-            case mark: MarkTransactionNotReadOnlyMessage =>
-                processWithReply(() => transaction.isRetryWithWrite = true)
         }
 
     def commit =
@@ -40,8 +37,6 @@ class ExecutorTransactor(override val oneActorPerThread: Boolean)(implicit conte
     def startTransactionIfNotStarted =
         syncExec(StartTransactionIfNotStartedMessage())
 
-    def markTransactionNotReadOnly =
-        syncExec(MarkTransactionNotReadOnlyMessage())
 }
 
 class TransactorDsl(implicit context: TransactionContext) extends AbstractActorDsl[ExecutorTransactor] {

@@ -23,7 +23,6 @@ class TransactionValidatorSpecs extends Specification {
                         inActor2 {
                             !ref must beEqualTo(1)
                         }
-                        actor2.markTransactionNotReadOnly
                         inActor1 {
                             ref := 10
                         }
@@ -91,9 +90,7 @@ class TransactionValidatorSpecs extends Specification {
                         inActor1 {
                             !ref
                         }
-                        actor2.markTransactionNotReadOnly
                         actor2.commit
-                        actor1.markTransactionNotReadOnly
                         actor1.commit must throwA[ConcurrentTransactionException]
                     } must not beNull
                 }
@@ -109,7 +106,6 @@ class TransactionValidatorSpecs extends Specification {
                         inActor2 {
                             !ref
                         }
-                        actor2.markTransactionNotReadOnly
                         actor2.commit
                         inActor1 {
                             !ref
@@ -129,7 +125,6 @@ class TransactionValidatorSpecs extends Specification {
                         inActor1 {
                             !ref
                         } must beEqualTo(1)
-                        actor2.markTransactionNotReadOnly
                         actor2.commit
                         actor1.commit
                     } must not beNull

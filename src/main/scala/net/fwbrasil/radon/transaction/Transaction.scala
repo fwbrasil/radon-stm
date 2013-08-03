@@ -24,8 +24,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
     import context._
 
-    private[radon] var isRetryWithWrite = false
-
     private var refsRead: ListBuffer[Ref[Any]] = _
     private var refsReadOnly: ListBuffer[Ref[Any]] = _
     private var refsWrite: ListBuffer[Ref[Any]] = _
@@ -42,9 +40,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             for (snapshot <- snapshots if (snapshot.isWrite == true)) yield (snapshot.ref, snapshot.value, snapshot.destroyedFlag)
         else
             List()
-
-    private def isReadOnly =
-        !isRetryWithWrite && refsWrite.isEmpty
 
     private[radon] def put[T](ref: Ref[T], value: Option[T]) = {
         val anyRef = ref.asInstanceOf[Ref[Any]]
@@ -209,7 +204,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     }
 
     private def readTimestamp(isRefRead: Boolean, refContent: RefContent[_]) =
-        if (isRefRead && refContent.readTimestamp < startTimestamp && !isReadOnly)
+        if (isRefRead && refContent.readTimestamp < startTimestamp)
             startTimestamp
         else
             refContent.readTimestamp

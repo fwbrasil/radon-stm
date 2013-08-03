@@ -3,7 +3,6 @@ package net.fwbrasil.radon.transaction
 import net.fwbrasil.radon.RetryLimitTransactionException
 import net.fwbrasil.radon.RadonContext
 import net.fwbrasil.radon.RequiredTransactionException
-import net.fwbrasil.radon.RetryWithWriteTransactionException
 import net.fwbrasil.radon.ConcurrentTransactionException
 import net.fwbrasil.radon.util.ExclusiveThreadLocal
 import scala.annotation.tailrec
@@ -78,7 +77,6 @@ class TransactionManager(implicit val context: TransactionContext) {
         } catch {
             case e: ConcurrentTransactionException =>
                 waitToRetry(e)
-                transaction.isRetryWithWrite = e.retryWithWrite
                 runInTransactionWithRetry(transaction, f, retryCount + 1)
         }
     }
@@ -98,7 +96,6 @@ class TransactionManager(implicit val context: TransactionContext) {
                         throw new RetryLimitTransactionException
                     else {
                         waitToRetry(e)
-                        ctx.transaction.isRetryWithWrite = e.retryWithWrite
                         runInTransactionWithRetryAsync(future, ctx, retryCount + 1)
                     }
             }

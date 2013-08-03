@@ -105,7 +105,6 @@ class RefSpecs extends Specification {
                 transactional(transaction2) {
                     !ref
                 }
-                transaction2.isRetryWithWrite = true
                 val transaction2StartTimestamp = transaction2.startTimestamp
                 transaction2.commit
                 ref.readTimestamp must beEqualTo(transaction2StartTimestamp)
