@@ -14,7 +14,6 @@ import net.fwbrasil.radon.ref.RefContent
 import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
 import net.fwbrasil.radon.util.Lockable.lockall
 import java.util.concurrent.atomic.AtomicLong
-import java.util.Collection
 
 class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
         extends TransactionValidator
@@ -27,7 +26,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     private var refsRead: ListBuffer[Ref[Any]] = _
     private var refsReadOnly: ListBuffer[Ref[Any]] = _
     private var refsWrite: ListBuffer[Ref[Any]] = _
-    private var snapshots: Collection[RefSnapshot] = _
+    private var snapshots: List[RefSnapshot] = _
     private var readLocks: List[Ref[Any]] = _
     private var writeLocks: List[Ref[Any]] = _
     var attachments = ListBuffer[Any]()
@@ -75,7 +74,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         val refsRead = new ListBuffer[Ref[Any]]()
         val refsReadOnly = new ListBuffer[Ref[Any]]()
         val refsWrite = new ListBuffer[Ref[Any]]()
-        val snapshots = refsSnapshot.values
+        val snapshots = refsSnapshot.values.toList
         for (snapshot <- snapshots) {
             val ref = snapshot.ref
             if (snapshot.isRead) {
@@ -158,9 +157,8 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
     private def flushToMemory = {
         val snapshotsIterator = snapshots.iterator
-        snapshots = null
-        while (snapshotsIterator.hasNext)
-            setRefContent(snapshotsIterator.next)
+        snapshots = List()
+        snapshotsIterator.foreach(setRefContent)
     }
 
     private def validateTransaction = {
