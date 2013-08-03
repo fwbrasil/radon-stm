@@ -14,7 +14,7 @@ trait TransactionContext extends PropagationContext {
     private[radon] val transactionClock = new time.TransactionClock
 
     val retryLimit = 3000
-    val milisToWaitBeforeRetry = 1
+    val milisToWaitBeforeRetry = 0
 
     def executionContext = ExecutionContext.Implicits.global
 
