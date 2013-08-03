@@ -29,7 +29,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     private var snapshots: List[RefSnapshot] = _
     private var readLocks: List[Ref[Any]] = _
     private var writeLocks: List[Ref[Any]] = _
-    var attachments = ListBuffer[Any]()
+    var attachments = new ListBuffer[Any]()
 
     def reads =
         refsRead
