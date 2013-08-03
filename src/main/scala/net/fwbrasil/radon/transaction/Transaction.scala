@@ -12,7 +12,7 @@ import scala.util.Success
 import net.fwbrasil.radon.ref.Ref
 import net.fwbrasil.radon.ref.RefContent
 import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
-import net.fwbrasil.radon.util.SemaphoreLockable.lockall
+import net.fwbrasil.radon.util.Lockable.lockall
 import java.util.concurrent.atomic.AtomicLong
 import java.util.Collection
 

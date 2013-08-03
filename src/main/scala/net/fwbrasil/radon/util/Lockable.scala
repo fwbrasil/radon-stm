@@ -4,37 +4,40 @@ import scala.collection._
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.TimeUnit
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ Set => MutableSet }
+import java.util.concurrent.atomic.AtomicReferenceArray
+import System.{ identityHashCode => identity }
+import java.util.concurrent.Semaphore
 
 private[fwbrasil] trait Lockable {
 
-    private[this] val reentrantReadWriteLock = new ReentrantReadWriteLock(false)
-    private[this] val reentrantReadLock = reentrantReadWriteLock.readLock
-    private[this] val reentrantWriteLock = reentrantReadWriteLock.writeLock
+    private var semaphore = new Semaphore(Int.MaxValue, true)
 
     private[fwbrasil] def tryReadLock =
-        reentrantReadLock.tryLock
+        semaphore.tryAcquire(1)
 
     private[fwbrasil] def tryWriteLock =
-        reentrantWriteLock.tryLock
+        semaphore.tryAcquire(Int.MaxValue)
 
     private[fwbrasil] def readLock =
-        reentrantReadLock.lock
+        semaphore.acquire(1)
 
     private[fwbrasil] def writeLock =
-        reentrantWriteLock.lock
+        semaphore.acquire(Int.MaxValue)
 
     private[fwbrasil] def readUnlock =
-        reentrantReadLock.unlock
+        semaphore.release
 
     private[fwbrasil] def writeUnlock =
-        reentrantWriteLock.unlock
+        semaphore.release(Int.MaxValue)
 
     private[fwbrasil] def readLockCount =
-        reentrantReadWriteLock.getReadLockCount
+        if (semaphore.availablePermits > 0)
+            Int.MaxValue - semaphore.availablePermits
+        else 0
 
     private[fwbrasil] def isWriteLocked =
-        reentrantReadWriteLock.isWriteLocked
+        semaphore.availablePermits == 0
 
     private[fwbrasil] def doWithReadLock[A](f: => A): A =
         try {
