@@ -19,20 +19,7 @@ trait Sink[-T] {
     def put(value: Option[T]): Unit
 }
 
-trait RefListener[T] {
-    def notifyGet(ref: Ref[T]) = {
-
-    }
-    def notifyPut(ref: Ref[T], obj: Option[T]) = {
-
-    }
-    def notifyRollback(ref: Ref[T]) = {
-
-    }
-    def notifyCommit(ref: Ref[T]) = {
-
-    }
-}
+object notifyingFlag
 
 class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context: TransactionContext)
         extends Source[T] with Sink[T] with Lockable with java.io.Serializable {
@@ -88,13 +75,12 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
     private[fwbrasil] def destroyInternal =
         setRefContent(None, readTimestamp, writeTimestamp, true)
 
-    private[fwbrasil] def setRefContent(pValue: Option[T], pReadTimestamp: Long, pWriteTimestamp: Long, pDestroyedFlag: Boolean): Unit = {
-        if (_weakListenersMap != null) {
-            for (listener <- _weakListenersMap.keys)
-                listener.notifyCommit(this)
-        }
+    private[fwbrasil] def setRefContent(
+        pValue: Option[T],
+        pReadTimestamp: Long,
+        pWriteTimestamp: Long,
+        pDestroyedFlag: Boolean): Unit =
         _refContent = new RefContent[T](pValue, pReadTimestamp, pWriteTimestamp, pDestroyedFlag)
-    }
 
     private[radon] def readTimestamp = refContent.readTimestamp
     private[radon] def writeTimestamp = refContent.writeTimestamp
@@ -104,35 +90,42 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
             creationTransactionId != 0 &&
             !creationTransactionIsTransient
 
-    def get: Option[T] = {
-        val result = getRequiredTransaction.get(this)
-        if (_weakListenersMap != null)
-            for (listener <- _weakListenersMap.keys)
-                listener.notifyGet(this)
-        result
-    }
+    def get: Option[T] =
+        nestTransactionIfHasListeners {
+            val result = getRequiredTransaction.get(this)
+            if (_weakListenersMap != null)
+                for (listener <- _weakListenersMap.keys)
+                    listener.notifyGet(this)
+            result
+        }
 
-    def put(pValue: Option[T], pTransaction: Transaction): Unit = {
-        val value = if (pValue == null) None else pValue
-        if (_weakListenersMap == null)
+    def put(pValue: Option[T], pTransaction: => Transaction): Unit =
+        nestTransactionIfHasListeners {
+            val value = if (pValue == null) None else pValue
             pTransaction.put(this, value)
-        else {
-            import context._
-            transactional(nested) {
-                getRequiredTransaction.put(this, value)
+            if (_weakListenersMap != null)
                 for (listener <- _weakListenersMap.keys)
                     listener.notifyPut(this, value)
-            }
+        }
+
+    private def nestTransactionIfHasListeners[R](f: => R) = {
+        if (_weakListenersMap == null)
+            f
+        else {
+            import context._
+            def transaction = transactionManager.getRequiredActiveTransaction
+            if (!transaction.attachments.contains(notifyingFlag))
+                transactional(nested) {
+                    transaction.attachments += notifyingFlag
+                    f
+                }
+            else
+                f
         }
     }
 
     def put(pValue: Option[T]): Unit =
         put(pValue, getRequiredTransaction)
-
-    private[radon] def notifyRollback =
-        if (_weakListenersMap != null)
-            for (listener <- _weakListenersMap.keys)
-                listener.notifyRollback(this)
 
     def destroy: Unit =
         getRequiredTransaction.destroy(this)

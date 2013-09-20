@@ -49,18 +49,13 @@ class TransactionManager(implicit val context: TransactionContext) {
     private[radon] def runInTransaction[A](transaction: Transaction)(f: => A): A = {
         val someTransaction = Some(transaction)
         activate(someTransaction)
-        val res =
-            try
-                f
-            catch {
-                case e: Throwable => {
-                    deactivate(someTransaction)
-                    transaction.rollback
-                    throw e
-                }
-            }
-        deactivate(someTransaction)
-        res
+        try
+            f
+        catch {
+            case e: Throwable =>
+                throw e
+        } finally
+            deactivate(someTransaction)
     }
 
     private[radon] def runInNewTransactionWithRetry[A](f: => A): A =
@@ -76,8 +71,12 @@ class TransactionManager(implicit val context: TransactionContext) {
             result
         } catch {
             case e: ConcurrentTransactionException =>
+                transaction.rollback
                 waitToRetry(e)
                 runInTransactionWithRetry(transaction, f, retryCount + 1)
+            case other: Throwable =>
+                transaction.rollback
+                throw other
         }
     }
 

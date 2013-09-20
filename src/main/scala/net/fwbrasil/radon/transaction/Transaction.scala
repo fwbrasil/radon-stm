@@ -224,8 +224,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         clear
         for (ref <- refsCreated)
             destroy(ref)
-        for (ref <- refsWrote)
-            ref.notifyRollback
         updateReadsAndWrites
     }
 
