@@ -202,7 +202,7 @@ class TransactionValidatorSpecs extends Specification {
 
             "concurrent threads" in {
                 new ActorDsl with ManyActors with OneActorPerThread {
-                    override lazy val actorsPoolSize = 100
+                    override lazy val actorsPoolSize = 400
                     val ref =
                         inMainActor {
                             transactional {

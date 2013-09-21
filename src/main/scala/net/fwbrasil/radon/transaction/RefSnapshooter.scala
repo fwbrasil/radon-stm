@@ -8,6 +8,7 @@ class RefSnapshot(val ref: Ref[Any]) {
     val originalContent = ref.refContent
     var value = originalContent.value
     var destroyedFlag = originalContent.destroyedFlag
+    var isReadDestroyedFlag = false
     var isRead = false
     var isWrite = false
 }
@@ -18,10 +19,7 @@ abstract class RefSnapshooter extends TransactionStopWatch {
 
     private[transaction] var refsSnapshot = new IdentityHashMap[Ref[Any], RefSnapshot]()
 
-    protected def getSnapshot(ref: Ref[Any]): RefSnapshot =
-        getSnapshot(ref, true)
-
-    protected def getSnapshot(ref: Ref[Any], validateDestroyed: Boolean): RefSnapshot = {
+    protected def getSnapshot(ref: Ref[Any]): RefSnapshot = {
         startIfNotStarted
         val snapOrNull = refsSnapshot.get(ref)
         if (snapOrNull == null) {
@@ -42,6 +40,12 @@ abstract class RefSnapshooter extends TransactionStopWatch {
         val snap = getSnapshot(ref)
         snap.destroyedFlag = true
         snap.isWrite = true
+    }
+    
+    protected def snapshotIsDestroyed(ref: Ref[Any]): Boolean = {
+        val snap = getSnapshot(ref)
+        snap.isReadDestroyedFlag = true
+        snap.destroyedFlag
     }
 
     protected def snapshotWrite(ref: Ref[Any], value: Option[Any]): Unit = {
