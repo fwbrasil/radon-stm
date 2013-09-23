@@ -48,6 +48,9 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     private[radon] def get[T](ref: Ref[T]): Option[T] =
         snapshotRead(ref.asInstanceOf[Ref[Any]]).asInstanceOf[Option[T]]
 
+    private[radon] def getOriginalValue[T](ref: Ref[T]): Option[T] =
+        snapshotReadOriginalValue(ref.asInstanceOf[Ref[Any]]).asInstanceOf[Option[T]]
+    
     private[radon] def destroy[T](ref: Ref[T]): Unit = {
         val anyRef = ref.asInstanceOf[Ref[Any]]
         snapshotDestroy(anyRef)

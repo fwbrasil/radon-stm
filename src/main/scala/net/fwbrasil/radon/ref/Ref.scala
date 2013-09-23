@@ -98,7 +98,10 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
                     listener.notifyGet(this)
             result
         }
-
+    
+    def getOriginalValue: Option[T] = 
+        getRequiredTransaction.getOriginalValue(this)
+        
     def put(pValue: Option[T], pTransaction: => Transaction): Unit =
         nestTransactionIfHasListeners {
             val value = if (pValue == null) None else pValue

@@ -202,6 +202,16 @@ class RefSpecs extends Specification {
                     t1.commit must throwA[ConcurrentTransactionException]
                 }
             }
+
+        }
+        "return the original value" in {
+            val ref = transactional(new Ref(0))
+            transactional {
+                ref.getOriginalValue === Some(0)
+                ref := 1
+                ref.getOriginalValue === Some(0)
+                ref.get === Some(1)
+            }
         }
     }
 

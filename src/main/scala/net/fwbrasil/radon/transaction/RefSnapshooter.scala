@@ -35,7 +35,13 @@ abstract class RefSnapshooter extends TransactionStopWatch {
         snap.isRead = true
         snap.value
     }
-
+    
+    protected def snapshotReadOriginalValue(ref: Ref[Any]): Option[Any] = {
+        val snap = getSnapshot(ref)
+        snap.isRead = true
+        snap.originalContent.value
+    }
+    
     protected def snapshotDestroy(ref: Ref[Any]): Unit = {
         val snap = getSnapshot(ref)
         snap.destroyedFlag = true
