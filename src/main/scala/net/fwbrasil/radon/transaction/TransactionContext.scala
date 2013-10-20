@@ -73,7 +73,10 @@ trait TransactionContext extends PropagationContext {
 
     def makeDurableAsync(transaction: Transaction)(implicit ectx: ExecutionContext): Future[Unit] =
         Future()
-
+        
+    def beforeCommit(transaction: Transaction) = {}
+    def afterCommit(transaction: Transaction) = {}
+        
     def makeDurable(transaction: Transaction) = {}
 
 }

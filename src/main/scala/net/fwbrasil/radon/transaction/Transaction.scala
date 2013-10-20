@@ -32,7 +32,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     var attachments = new ListBuffer[Any]()
 
     def reads =
-        refsRead
+        refsReadOnly
 
     def assignments =
         if (snapshots != null)
@@ -50,13 +50,13 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
 
     private[radon] def getOriginalValue[T](ref: Ref[T]): Option[T] =
         snapshotReadOriginalValue(ref.asInstanceOf[Ref[Any]]).asInstanceOf[Option[T]]
-    
+
     private[radon] def destroy[T](ref: Ref[T]): Unit = {
         val anyRef = ref.asInstanceOf[Ref[Any]]
         snapshotDestroy(anyRef)
     }
 
-    private[radon] def isDestroyed[T](ref: Ref[T]): Boolean = 
+    private[radon] def isDestroyed[T](ref: Ref[T]): Boolean =
         snapshotIsDestroyed(ref.asInstanceOf[Ref[Any]])
 
     private[radon] def isDirty[T](ref: Ref[T]): Boolean = {
@@ -111,6 +111,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     }
 
     private def commit(rollback: Boolean): Unit = {
+        if (!rollback) beforeCommit(this)
         updateReadsAndWrites
         startIfNotStarted
         try {
@@ -118,15 +119,21 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             validateTransaction
             if (!transient && !rollback)
                 context.makeDurable(this)
+            flushTransaction
+            if (!rollback) afterCommit(this)
+            attachments.clear
         } catch {
             case e: Throwable =>
                 prepareRollback
+                flushTransaction
+                attachments.clear
                 throw e
-        } finally
-            flushTransaction
+        }
+
     }
 
     private def asyncCommit(rollback: Boolean)(implicit ectx: ExecutionContext): Future[Unit] = {
+        if (!rollback) beforeCommit(this)
         updateReadsAndWrites
         startIfNotStarted
         Future {
@@ -139,11 +146,15 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
                 Future.successful()
         }.transform(
             {
-                _ => flushTransaction
+                _ =>
+                    flushTransaction
+                    if (!rollback) afterCommit(this)
+                    attachments.clear
             }, {
                 e =>
                     prepareRollback
                     flushTransaction
+                    attachments.clear
                     throw e
             })
     }
@@ -237,7 +248,6 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
     private[transaction] def clear = {
         refsRead = null
         refsWrite = null
-        attachments.clear
         clearSnapshots
         clearStopWatch
     }
