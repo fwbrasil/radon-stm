@@ -12,7 +12,8 @@ abstract class TransactionValidator extends RefSnapshooter {
 
     protected def validateWrite(ref: Ref[Any]) =
         retryIfTrue(
-            isRefReadAfterTheStartOfTransaction(ref),
+            isRefReadAfterTheStartOfTransaction(ref) ||
+                isRefWroteAfterTheStartOfTransaction(ref),
             List(ref))
 
     protected def validateRead(ref: Ref[Any]) =
@@ -21,8 +22,8 @@ abstract class TransactionValidator extends RefSnapshooter {
                 isAnOutdatedSnapshot(ref, getSnapshot(ref)),
             List(ref))
 
-    protected def validateDestroyed(ref: Ref[Any]) = 
-        if (ref.refContent.destroyedFlag) 
+    protected def validateDestroyed(ref: Ref[Any]) =
+        if (ref.refContent.destroyedFlag)
             if (isRefWroteAfterTheStartOfTransaction(ref) || getSnapshot(ref).isReadDestroyedFlag)
                 context.retry(ref)
             else

@@ -197,7 +197,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
         val refContent = ref.refContent
         var value: Option[Any] = None
         var destroyedFlag = false
-        if (snapshot.isWrite && refContent.writeTimestamp < startTimestamp) {
+        if (snapshot.isWrite) {
             value = snapshot.value
             destroyedFlag = snapshot.destroyedFlag
         } else {
