@@ -6,6 +6,10 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import net.fwbrasil.radon.RetryLimitTransactionException
 
+sealed trait TransactionType
+case object readOnly extends TransactionType
+case object readWrite extends TransactionType
+
 trait TransactionContext extends PropagationContext {
 
     protected[fwbrasil] val transactionManager =
@@ -17,34 +21,43 @@ trait TransactionContext extends PropagationContext {
     val milisToWaitBeforeRetry = 1
 
     def executionContext = ExecutionContext.Implicits.global
+    
+    val readOnly = net.fwbrasil.radon.transaction.readOnly
+    val readWrite = net.fwbrasil.radon.transaction.readWrite
 
     private[fwbrasil] implicit val ectx = executionContext
 
     type Transaction = net.fwbrasil.radon.transaction.Transaction
 
     def transactional[A](f: => A): A =
-        transactional(transactionManager.getActiveTransaction, required)(f)
+        transactional(transactionManager.getActiveTransaction, required, readWrite)(f)
+
+    def transactional[A](typ: TransactionType = readWrite)(f: => A): A =
+        transactional(transactionManager.getActiveTransaction, required, typ)(f)
 
     def transactional[A](propagation: net.fwbrasil.radon.transaction.Propagation)(f: => A): A =
-        transactional(transactionManager.getActiveTransaction, propagation)(f)
+        transactional(transactionManager.getActiveTransaction, propagation, readWrite)(f)
+
+    def transactional[A](typ: TransactionType, propagation: net.fwbrasil.radon.transaction.Propagation)(f: => A): A =
+        transactional(transactionManager.getActiveTransaction, propagation, typ)(f)
 
     def transactional[A](pTransaction: net.fwbrasil.radon.transaction.Transaction)(f: => A): A =
         transactional(Option(pTransaction))(f)
 
     def transactional[A](pTransaction: Option[net.fwbrasil.radon.transaction.Transaction])(f: => A): A =
-        transactional(pTransaction, required)(f)
+        transactional(pTransaction, required, readWrite)(f)
 
     def transactional[A](pTransaction: net.fwbrasil.radon.transaction.Transaction, propagation: Propagation)(f: => A): A =
-        transactional(Option(pTransaction), propagation)(f)
+        transactional(Option(pTransaction), propagation, readWrite)(f)
 
-    def transactional[A](transaction: Option[net.fwbrasil.radon.transaction.Transaction], propagation: Propagation)(f: => A): A = {
+    private def transactional[A](transaction: Option[net.fwbrasil.radon.transaction.Transaction], propagation: Propagation, typ: TransactionType)(f: => A): A = {
         val activeTransaction = transactionManager.getActiveTransaction
         if (activeTransaction.isDefined && activeTransaction != transaction)
             throw new IllegalStateException("There is another active transaction!")
         if (transaction.isDefined)
-            propagation.execute(transaction)(f)(this)
+            propagation.execute(transaction, typ)(f)(this)
         else
-            propagation.execute(transaction)(f)(this)
+            propagation.execute(transaction, typ)(f)(this)
     }
 
     def asyncTransactional[A](f: => A): Future[A] =

@@ -15,11 +15,11 @@ import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
 import net.fwbrasil.radon.util.Lockable.lockall
 import java.util.concurrent.atomic.AtomicLong
 
-class Transaction(val transient: Boolean)(implicit val context: TransactionContext)
+class Transaction private[fwbrasil] (val transient: Boolean = false, transactionType: TransactionType = readWrite)(implicit val context: TransactionContext)
         extends TransactionValidator
         with ExclusiveThreadLocalItem {
 
-    def this()(implicit context: TransactionContext) = this(false)
+    def this()(implicit context: TransactionContext) = this(false, readWrite)
 
     import context._
 
@@ -41,6 +41,7 @@ class Transaction(val transient: Boolean)(implicit val context: TransactionConte
             List()
 
     private[radon] def put[T](ref: Ref[T], value: Option[T]) = {
+        if(transactionType == readOnly) throw new IllegalStateException("Trying to write on a read only transaction. Ref: " + ref + " Value: " + value)
         val anyRef = ref.asInstanceOf[Ref[Any]]
         snapshotWrite(anyRef, value)
     }

@@ -58,8 +58,8 @@ class TransactionManager(implicit val context: TransactionContext) {
             deactivate(someTransaction)
     }
 
-    private[radon] def runInNewTransactionWithRetry[A](f: => A): A =
-        runInTransactionWithRetry(new Transaction, f)
+    private[radon] def runInNewTransactionWithRetry[A](typ: TransactionType, f: => A): A =
+        runInTransactionWithRetry(new Transaction(false, typ), f)
 
     @tailrec private[radon] final def runInTransactionWithRetry[A](
         transaction: Transaction, f: => A, retryCount: Int = 0): A = {

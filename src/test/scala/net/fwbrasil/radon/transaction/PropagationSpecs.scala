@@ -78,7 +78,7 @@ class PropagationSpecs extends Specification {
         }
 
         "run without a transaction and create a new one" in {
-            transactional(None, requiresNew) {
+            transactional(requiresNew) {
                 new Ref(new Object)
             } must not beNull
         }
@@ -104,7 +104,7 @@ class PropagationSpecs extends Specification {
     }
 
     private[this] def runWithoutATransaction(propagation: Propagation) =
-        transactional(None, propagation) {
+        transactional(propagation) {
             new Ref(new Object) must throwA[RequiredTransactionException]
         }
 

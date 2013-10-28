@@ -6,8 +6,8 @@ import net.fwbrasil.radon.ref.Ref
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-final class NestedTransaction(val parent: Transaction)(override implicit val context: TransactionContext)
-        extends Transaction()(context) {
+final class NestedTransaction(val parent: Transaction, transactionType: TransactionType = readWrite)(override implicit val context: TransactionContext)
+        extends Transaction(false, transactionType)(context) {
 
     startTimestamp = parent.startTimestamp
     endTimestamp = parent.endTimestamp
@@ -35,8 +35,8 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
         }
         clear
     }
-    
-    override def asyncCommit()(implicit ectx: ExecutionContext) =  
+
+    override def asyncCommit()(implicit ectx: ExecutionContext) =
         Future.successful(commit())
 
     private[radon] def rootTransaction: Transaction =
@@ -57,13 +57,13 @@ final class NestedTransaction(val parent: Transaction)(override implicit val con
 }
 
 class Nested extends Propagation {
-    private[transaction] def execute[A](transaction: Option[Transaction])(f: => A)(implicit ctx: TransactionContext): A = {
+    private[transaction] def execute[A](transaction: Option[Transaction], transactionType: TransactionType)(f: => A)(implicit ctx: TransactionContext): A = {
         import ctx.transactionManager._
         if (transaction.isEmpty)
             throw new RequiredTransactionException
         deactivate(transaction)
         try {
-            val nested = new NestedTransaction(transaction.get)(ctx)
+            val nested = new NestedTransaction(transaction.get, transactionType)(ctx)
             runInTransactionWithRetry(nested, f)
         } finally
             activate(transaction)
