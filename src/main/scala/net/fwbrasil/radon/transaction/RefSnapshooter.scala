@@ -26,7 +26,7 @@ abstract class RefSnapshooter extends TransactionStopWatch {
             val newSnap = new RefSnapshot(ref)
             refsSnapshot.put(ref, newSnap)
             newSnap
-        } else
+        } else 
             snapOrNull
     }
 

@@ -46,7 +46,7 @@ class Transaction private[fwbrasil] (val transient: Boolean = false, transaction
         snapshotWrite(anyRef, value)
     }
 
-    private[radon] def get[T](ref: Ref[T]): Option[T] =
+    private[radon] def get[T](ref: Ref[T]): Option[T] = 
         snapshotRead(ref.asInstanceOf[Ref[Any]]).asInstanceOf[Option[T]]
 
     private[radon] def getOriginalValue[T](ref: Ref[T]): Option[T] =
