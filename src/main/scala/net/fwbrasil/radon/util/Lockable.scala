@@ -55,6 +55,12 @@ private[fwbrasil] trait Lockable {
 }
 
 object Lockable {
-    def lockall[L <% Lockable](lockables: Iterable[L], lockFunc: (Lockable) => Boolean) =
-        lockables.toList.partition(lockFunc(_))
+    def lockall[L <% Lockable](pLockables: Iterable[L], lockFunc: (Lockable) => Boolean) = {
+        val lockables = pLockables.toList
+        val unlocked = lockables.filter(!lockFunc(_)).toList
+        if(unlocked.isEmpty)
+            (lockables, List())
+        else
+            (lockables.filter(!unlocked.contains(_)), unlocked.toList)
+    }
 }
