@@ -11,7 +11,7 @@ import java.util.concurrent.Semaphore
 
 private[fwbrasil] trait Lockable {
 
-    private var semaphore = new Semaphore(Int.MaxValue, true)
+    private val semaphore = new Semaphore(Int.MaxValue, true)
 
     private[fwbrasil] def tryReadLock =
         semaphore.tryAcquire(1)
