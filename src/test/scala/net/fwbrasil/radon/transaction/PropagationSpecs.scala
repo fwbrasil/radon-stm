@@ -92,6 +92,37 @@ class PropagationSpecs extends Specification {
         "accept a transaction and use it" in
             acceptATransactionAndUseIt(supports)
     }
+    
+    "Shadow transaction propagation" should {
+
+        "accept a transaction, desactivate it and run with a new one" in {
+            val transaction = new Transaction
+            val ref =
+                transactional(transaction) {
+                    transactional(shadow) {
+                        new Ref(new Object)
+                    }
+                }
+            transaction.assignments.isEmpty must beTrue
+        }
+
+        "run without a transaction and create a new one" in {
+            transactional(shadow) {
+                new Ref(new Object)
+            } must not beNull
+        }
+        
+        "do not update read/write timestamps" in {
+            val ref = transactional(new Ref(0))
+            val originalRefContent = ref.refContent
+            transactional(shadow) {
+                ref := 1
+            }
+            ref.refContent.value === Some(1)
+            ref.refContent.readTimestamp === originalRefContent.readTimestamp
+            ref.refContent.writeTimestamp === originalRefContent.writeTimestamp
+        }
+    }
 
     private[this] def acceptATransactionAndUseIt(propagation: Propagation) = {
         val transaction = new Transaction

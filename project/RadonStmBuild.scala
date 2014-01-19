@@ -52,7 +52,7 @@ object RadonStmBuild extends Build {
 				),
 				organization := "net.fwbrasil",
 				scalaVersion := "2.10.1",
-				version := "1.5-M1"
+				version := "1.5-SNAPSHOT"
 			)
 		)
 

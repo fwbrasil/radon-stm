@@ -15,7 +15,7 @@ import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
 import net.fwbrasil.radon.util.Lockable.lockall
 import java.util.concurrent.atomic.AtomicLong
 
-class Transaction private[fwbrasil] (val transient: Boolean = false, transactionType: TransactionType = readWrite)(implicit val context: TransactionContext)
+class Transaction private[fwbrasil] (val transient: Boolean = false, transactionType: TransactionType = readWrite, val shadow: Boolean = false)(implicit val context: TransactionContext)
         extends TransactionValidator
         with ExclusiveThreadLocalItem {
 
@@ -215,13 +215,13 @@ class Transaction private[fwbrasil] (val transient: Boolean = false, transaction
     }
 
     private def readTimestamp(isRefRead: Boolean, refContent: RefContent[_]) =
-        if (isRefRead && refContent.readTimestamp < startTimestamp)
+        if (isRefRead && refContent.readTimestamp < startTimestamp && !shadow)
             startTimestamp
         else
             refContent.readTimestamp
 
     private def writeTimestamp(isRefWrite: Boolean, refContent: RefContent[_]) =
-        if (isRefWrite && refContent.writeTimestamp < startTimestamp)
+        if (isRefWrite && refContent.writeTimestamp < startTimestamp && !shadow)
             endTimestamp
         else
             refContent.writeTimestamp

@@ -129,6 +129,19 @@ class Transient extends Propagation {
                 activate(transaction)
     }
 }
+class Shadow extends Propagation {
+    private[transaction] def execute[A](transaction: Option[Transaction], transactionType: TransactionType)(f: => A)(implicit ctx: TransactionContext): A = {
+        import ctx.transactionManager._
+        val wasActive = isActive(transaction)
+        if (wasActive)
+            deactivate(transaction)
+        try {
+            runInTransactionWithRetry(new Transaction(transient = true, shadow = true)(ctx), f)
+        } finally
+            if (wasActive)
+                activate(transaction)
+    }
+}
 trait PropagationContext {
     type Propagation = net.fwbrasil.radon.transaction.Propagation
     val required = new net.fwbrasil.radon.transaction.Required
@@ -139,4 +152,5 @@ trait PropagationContext {
     val supports = new net.fwbrasil.radon.transaction.Supports
     val nested = new net.fwbrasil.radon.transaction.Nested
     val transient = new net.fwbrasil.radon.transaction.Transient
+    val shadow = new net.fwbrasil.radon.transaction.Shadow
 }
