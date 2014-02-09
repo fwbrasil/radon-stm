@@ -6,10 +6,6 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import net.fwbrasil.radon.RetryLimitTransactionException
 
-sealed trait TransactionType
-case object readOnly extends TransactionType
-case object readWrite extends TransactionType
-
 trait TransactionContext extends PropagationContext {
 
     protected[fwbrasil] val transactionManager =
@@ -21,9 +17,12 @@ trait TransactionContext extends PropagationContext {
     val milisToWaitBeforeRetry = 1
 
     def executionContext = ExecutionContext.Implicits.global
-    
-    val readOnly = net.fwbrasil.radon.transaction.readOnly
-    val readWrite = net.fwbrasil.radon.transaction.readWrite
+
+    type ReadOnly = net.fwbrasil.radon.transaction.ReadOnly
+    type ReadWrite = net.fwbrasil.radon.transaction.ReadWrite
+
+    val readOnly = net.fwbrasil.radon.transaction.ReadOnly()
+    val readWrite = net.fwbrasil.radon.transaction.ReadWrite()
 
     private[fwbrasil] implicit val ectx = executionContext
 
@@ -61,10 +60,16 @@ trait TransactionContext extends PropagationContext {
     }
 
     def asyncTransactional[A](f: => A): Future[A] =
-        asyncTransactionalChain(Future(f)(_))
+        asyncTransactionalChain(readWrite)(Future(f)(_))
 
-    def asyncTransactionalChain[A](fFuture: TransactionalExecutionContext => Future[A]) = {
-        val ctx = new TransactionalExecutionContext()(this)
+    def asyncTransactional[A](typ: TransactionType)(f: => A): Future[A] =
+        asyncTransactionalChain(typ)(Future(f)(_))
+
+    def asyncTransactionalChain[A](fFuture: TransactionalExecutionContext => Future[A]): Future[A] =
+        asyncTransactionalChain(readWrite)(fFuture)
+
+    def asyncTransactionalChain[A](typ: TransactionType)(fFuture: TransactionalExecutionContext => Future[A]) = {
+        val ctx = new TransactionalExecutionContext(typ)(this)
         transactionManager.runInTransactionWithRetryAsync(fFuture(ctx), ctx)
     }
 
@@ -86,16 +91,16 @@ trait TransactionContext extends PropagationContext {
 
     def makeDurableAsync(transaction: Transaction)(implicit ectx: ExecutionContext): Future[Unit] =
         Future()
-        
+
     def beforeCommit(transaction: Transaction) = {}
     def afterCommit(transaction: Transaction) = {}
-        
+
     def makeDurable(transaction: Transaction) = {}
 
 }
 
-class TransactionalExecutionContext(implicit val ctx: TransactionContext) extends ExecutionContext {
-    val transaction = new Transaction
+class TransactionalExecutionContext(typ: TransactionType = ReadWrite())(implicit val ctx: TransactionContext) extends ExecutionContext {
+    val transaction = new Transaction(transactionType = typ)
     override def execute(runnable: Runnable): Unit =
         ctx.ectx.execute {
             new Runnable {

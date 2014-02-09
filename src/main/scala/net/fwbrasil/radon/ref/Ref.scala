@@ -22,7 +22,7 @@ trait Sink[-T] {
 object notifyingFlag
 
 class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context: TransactionContext)
-        extends Source[T] with Sink[T] with Lockable with java.io.Serializable {
+    extends Source[T] with Sink[T] with Lockable with java.io.Serializable {
 
     import context.transactionManager._
 
@@ -91,17 +91,19 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
             !creationTransactionIsTransient
 
     def get: Option[T] =
-        nestTransactionIfHasListeners {
-            val result = getRequiredTransaction.get(this)
-            if (_weakListenersMap != null)
-                for (listener <- _weakListenersMap.keys)
-                    listener.notifyGet(this)
-            result
-        }
-    
-    def getOriginalValue: Option[T] = 
+        getTransaction.map { transaction =>
+            nestTransactionIfHasListeners {
+                val result = transaction.get(this)
+                if (_weakListenersMap != null)
+                    for (listener <- _weakListenersMap.keys)
+                        listener.notifyGet(this)
+                result
+            }
+        }.getOrElse(refContent.value)
+
+    def getOriginalValue: Option[T] =
         getRequiredTransaction.getOriginalValue(this)
-        
+
     def put(pValue: Option[T], pTransaction: => Transaction): Unit =
         nestTransactionIfHasListeners {
             val value = if (pValue == null) None else pValue

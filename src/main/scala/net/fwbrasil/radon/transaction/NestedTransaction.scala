@@ -6,7 +6,7 @@ import net.fwbrasil.radon.ref.Ref
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-final class NestedTransaction(val parent: Transaction, transactionType: TransactionType = readWrite)(override implicit val context: TransactionContext)
+final class NestedTransaction(val parent: Transaction, transactionType: TransactionType = ReadWrite())(override implicit val context: TransactionContext)
         extends Transaction(false, transactionType)(context) {
 
     startTimestamp = parent.startTimestamp

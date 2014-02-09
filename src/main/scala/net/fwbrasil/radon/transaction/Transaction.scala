@@ -15,11 +15,11 @@ import net.fwbrasil.radon.util.ExclusiveThreadLocalItem
 import net.fwbrasil.radon.util.Lockable.lockall
 import java.util.concurrent.atomic.AtomicLong
 
-class Transaction private[fwbrasil] (val transient: Boolean = false, transactionType: TransactionType = readWrite, val shadow: Boolean = false)(implicit val context: TransactionContext)
-        extends TransactionValidator
-        with ExclusiveThreadLocalItem {
+class Transaction private[fwbrasil] (val transient: Boolean = false, transactionType: TransactionType = ReadWrite(), val shadow: Boolean = false)(implicit val context: TransactionContext)
+    extends TransactionValidator
+    with ExclusiveThreadLocalItem {
 
-    def this()(implicit context: TransactionContext) = this(false, readWrite)
+    def this()(implicit context: TransactionContext) = this(false, ReadWrite())
 
     import context._
 
@@ -41,12 +41,12 @@ class Transaction private[fwbrasil] (val transient: Boolean = false, transaction
             List()
 
     private[radon] def put[T](ref: Ref[T], value: Option[T]) = {
-        if(transactionType == readOnly) throw new IllegalStateException("Trying to write on a read only transaction. Ref: " + ref + " Value: " + value)
+        if (transactionType == readOnly) throw new IllegalStateException("Trying to write on a read only transaction. Ref: " + ref + " Value: " + value)
         val anyRef = ref.asInstanceOf[Ref[Any]]
         snapshotWrite(anyRef, value)
     }
 
-    private[radon] def get[T](ref: Ref[T]): Option[T] = 
+    private[radon] def get[T](ref: Ref[T]): Option[T] =
         snapshotRead(ref.asInstanceOf[Ref[Any]]).asInstanceOf[Option[T]]
 
     private[radon] def getOriginalValue[T](ref: Ref[T]): Option[T] =
@@ -112,29 +112,31 @@ class Transaction private[fwbrasil] (val transient: Boolean = false, transaction
     }
 
     private def commit(rollback: Boolean): Unit = {
-        if (!rollback) beforeCommit(this)
+        if (!rollback) transactionManager.runInTransaction(this)(beforeCommit(this))
         updateReadsAndWrites
-        startIfNotStarted
-        try {
-            acquireLocks
-            validateTransaction
-            if (!transient && !rollback)
-                context.makeDurable(this)
-            flushTransaction
-            if (!rollback) afterCommit(this)
-            attachments.clear
-        } catch {
-            case e: Throwable =>
-                prepareRollback
+        if (transactionType.validateCommit || !refsWrite.isEmpty) {
+            startIfNotStarted
+            try {
+                acquireLocks
+                if (!shadow)
+                    validateTransaction
+                if (!transient && !rollback)
+                    context.makeDurable(this)
                 flushTransaction
+                if (!rollback) afterCommit(this)
                 attachments.clear
-                throw e
+            } catch {
+                case e: Throwable =>
+                    prepareRollback
+                    flushTransaction
+                    attachments.clear
+                    throw e
+            }
         }
-
     }
 
     private def asyncCommit(rollback: Boolean)(implicit ectx: ExecutionContext): Future[Unit] = {
-        if (!rollback) beforeCommit(this)
+        if (!rollback) transactionManager.runInTransaction(this)(beforeCommit(this))
         updateReadsAndWrites
         startIfNotStarted
         Future {
@@ -174,24 +176,26 @@ class Transaction private[fwbrasil] (val transient: Boolean = false, transaction
         snapshotsIterator.foreach(setRefContent)
     }
 
-    private def validateTransaction = {
-        refsReadOnly.foreach(e => {
-            validateContext(e)
-            validateConcurrentRefCreation(e)
-        })
+    private def validateTransaction =
+        if (transactionType.validateCommit) {
+            refsReadOnly.foreach(e => {
+                validateContext(e)
+                validateConcurrentRefCreation(e)
+            })
 
-        refsRead.foreach { e =>
-            validateRead(e)
-            validateDestroyed(e)
+            if (transactionType.validateReads)
+                refsRead.foreach { e =>
+                    validateRead(e)
+                    validateDestroyed(e)
+                }
+
+            refsWrite.foreach(e => {
+                validateContext(e)
+                validateConcurrentRefCreation(e)
+                validateWrite(e)
+                validateDestroyed(e)
+            })
         }
-
-        refsWrite.foreach(e => {
-            validateContext(e)
-            validateConcurrentRefCreation(e)
-            validateWrite(e)
-            validateDestroyed(e)
-        })
-    }
 
     private def setRefContent(snapshot: RefSnapshot) = {
         val ref = snapshot.ref
