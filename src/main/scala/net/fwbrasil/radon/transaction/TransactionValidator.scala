@@ -27,7 +27,7 @@ abstract class TransactionValidator extends RefSnapshooter {
             if (getSnapshot(ref).isReadDestroyedFlag)
                 context.retry(ref)
             else
-                throw new IllegalStateException("A destroyed ref was used.")
+                throw new IllegalStateException(s"A destroyed ref was used: $ref.")
 
     protected def validateContext(ref: Ref[Any]) =
         if (ref.context != context)

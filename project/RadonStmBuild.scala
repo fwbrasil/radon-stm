@@ -25,7 +25,6 @@ object RadonStmBuild extends Build {
 				  else                             
 				    Some("releases" at nexus + "service/local/staging/deploy/maven2")
 				},
-				credentials += Credentials(Path.userHome / ".sbt" / "sonatype.credentials"),
 				publishMavenStyle := true,
 				publishArtifact in Test := false,
 				pomIncludeRepository := { x => false },
@@ -52,7 +51,7 @@ object RadonStmBuild extends Build {
 				),
 				organization := "net.fwbrasil",
 				scalaVersion := "2.10.1",
-				version := "1.5-M4"
+				version := "1.5-RC1"
 			)
 		)
 
