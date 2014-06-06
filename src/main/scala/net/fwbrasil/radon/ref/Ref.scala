@@ -85,7 +85,7 @@ class Ref[T](pValueOption: Option[T], initialize: Boolean)(implicit val context:
     private[radon] def readTimestamp = refContent.readTimestamp
     private[radon] def writeTimestamp = refContent.writeTimestamp
 
-    private[radon] def isCreating =
+    def isCreating =
         writeTimestamp == 0 &&
             creationTransactionId != 0 &&
             !creationTransactionIsTransient
