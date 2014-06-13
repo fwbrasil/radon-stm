@@ -20,7 +20,7 @@ object RadonStmBuild extends Build {
 				// publishTo := Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as ("maven") withPermissions ("0644")),
 				publishTo <<= version { v: String =>
 				  val nexus = "https://oss.sonatype.org/"
-				  if (true || v.trim.endsWith("SNAPSHOT")) 
+				  if (v.trim.endsWith("SNAPSHOT")) 
 				    Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as("maven") withPermissions("0644"))
 				  else                             
 				    Some("releases" at nexus + "service/local/staging/deploy/maven2")
@@ -51,7 +51,7 @@ object RadonStmBuild extends Build {
 				),
 				organization := "net.fwbrasil",
 				scalaVersion := "2.10.1",
-				version := "1.5.2"
+				version := "1.6"
 			)
 		)
 
