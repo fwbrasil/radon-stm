@@ -1,4 +1,4 @@
-package net.fwbrasil.radon.transaction
+    package net.fwbrasil.radon.transaction
 
 import org.specs2.mutable._
 import net.fwbrasil.radon.TestRadonContext._
@@ -28,48 +28,6 @@ class TransactionValidatorSpecs extends Specification {
                         }
                         actor2.commit
                         actor1.commit must throwA[ConcurrentTransactionException]
-                    } must not beNull
-                }
-            }
-            "not return error if ref is read by concurrent read only transaction" in {
-                "during transaction" in {
-                    new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-                        val ref =
-                            transactional {
-                                new Ref(1)
-                            }
-                        actor1.startTransactionIfNotStarted
-                        inActor2 {
-                            !ref must beEqualTo(1)
-                        }
-                        actor2.commit
-                        inActor1 {
-                            ref := 10
-                        }
-                        actor1.commit
-                        transactional {
-                            !ref must beEqualTo(10)
-                        }
-                    } must not beNull
-                }
-                "on commit" in {
-                    new TransactorDsl with TwoTransactors with OneTransactorPerThread {
-                        val ref =
-                            transactional {
-                                new Ref(1)
-                            }
-                        actor1.startTransactionIfNotStarted
-                        inActor2 {
-                            !ref must beEqualTo(1)
-                        }
-                        inActor1 {
-                            ref := 10
-                        }
-                        actor2.commit
-                        actor1.commit
-                        transactional {
-                            !ref must beEqualTo(10)
-                        }
                     } must not beNull
                 }
             }

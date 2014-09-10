@@ -147,8 +147,6 @@ class RefSpecs extends Specification {
                 val ref = new Ref(100)
                 ref.destroy
                 ref.isDestroyed must beTrue
-                ref.get must throwA[IllegalStateException]
-                ref.put(Option(200)) must throwA[IllegalStateException]
             }
             "different transanctions" in {
                 val ref =
@@ -162,13 +160,9 @@ class RefSpecs extends Specification {
                 transactional {
                     ref.destroy
                     ref.isDestroyed must beTrue
-                    ref.get must throwA[IllegalStateException]
-                    ref.put(Option(200)) must throwA[IllegalStateException]
                 }
                 transactional {
                     ref.isDestroyed must beTrue
-                    ref.get must throwA[IllegalStateException]
-                    ref.put(Option(200)) must throwA[IllegalStateException]
                 }
             }
             "concurrent transactions" in {

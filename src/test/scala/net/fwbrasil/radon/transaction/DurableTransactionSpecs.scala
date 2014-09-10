@@ -18,7 +18,7 @@ class DurableTransactionSpecs extends Specification {
         override def makeDurable(transaction: Transaction) =
             f(transaction)
         override def makeDurableAsync(transaction: Transaction)(implicit ectx: ExecutionContext) =
-            Future(f(transaction))
+            Future(f(transaction))(ectx)
     }
 
     "Durable transaction" should

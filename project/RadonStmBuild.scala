@@ -5,8 +5,8 @@ object RadonStmBuild extends Build {
 
 	/* Dependencies */
 	val junit = "junit" % "junit" % "4.4" % "test"
-	val specs2 = "org.specs2" %% "specs2" % "1.13" % "test"
-	val scalaActors = "org.scala-lang" % "scala-actors" % "2.10.0" % "test"
+	val specs2 = "org.specs2" %% "specs2" % "2.3.13" % "test"
+	val scalaActors = "org.scala-lang" % "scala-actors" % "2.11.1" % "test"
 
 	lazy val radonStm =
 		Project(
@@ -50,7 +50,8 @@ object RadonStmBuild extends Build {
 				  </developers>
 				),
 				organization := "net.fwbrasil",
-				scalaVersion := "2.10.1",
+				scalaVersion := "2.11.2",
+    			crossScalaVersions := Seq("2.10.1", "2.11.2"),
 				version := "1.6"
 			)
 		)
