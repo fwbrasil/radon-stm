@@ -6,7 +6,7 @@ object RadonStmBuild extends Build {
 	/* Dependencies */
 	val junit = "junit" % "junit" % "4.4" % "test"
 	val specs2 = "org.specs2" %% "specs2" % "2.3.13" % "test"
-	val scalaActors = "org.scala-lang" % "scala-actors" % "2.11.1" % "test"
+	def scalaActors(scalaVersion: String) = "org.scala-lang" % "scala-actors" % scalaVersion % "test"
 
 	lazy val radonStm =
 		Project(
@@ -14,7 +14,8 @@ object RadonStmBuild extends Build {
 			base = file("."),
 			settings = Defaults.defaultSettings ++ Seq(
 				libraryDependencies ++=
-					Seq(junit, specs2, scalaActors),
+					Seq(junit, specs2),
+				libraryDependencies <+= scalaVersion(scalaActors(_)),
 				javacOptions ++= Seq("-source", "1.5", "-target", "1.5"),
 				// publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))), 
 				// publishTo := Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as ("maven") withPermissions ("0644")),
