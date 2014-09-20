@@ -14,7 +14,7 @@ object RadonStmBuild extends Build {
             base = file("."),
             settings = Defaults.defaultSettings ++ Seq(
                 libraryDependencies ++=
-                    Seq(junit, specs2),
+                    Seq(junit, specs2, scalaActors),
                 javacOptions ++= Seq("-source", "1.5", "-target", "1.5"),
                 // publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))), 
                 // publishTo := Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as ("maven") withPermissions ("0644")),
