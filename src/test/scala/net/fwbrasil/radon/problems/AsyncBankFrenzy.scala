@@ -43,7 +43,7 @@
              val people =
                  transactional {
                      for (
-                         i <- 0 until 200
+                         i <- 0 until 100
                      ) yield new Account(100)
                  }
 
