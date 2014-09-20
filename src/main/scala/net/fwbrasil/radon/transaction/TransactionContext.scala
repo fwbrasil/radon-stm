@@ -5,6 +5,7 @@ import net.fwbrasil.radon.ref.Ref
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import net.fwbrasil.radon.RetryLimitTransactionException
+import java.util.concurrent.Executors
 
 trait TransactionContext extends PropagationContext {
 
@@ -16,7 +17,7 @@ trait TransactionContext extends PropagationContext {
     val retryLimit = 3000
     val milisToWaitBeforeRetry = 1
 
-    def executionContext = ExecutionContext.Implicits.global
+    val executionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 
     type ReadOnly = net.fwbrasil.radon.transaction.ReadOnly
     type ReadWrite = net.fwbrasil.radon.transaction.ReadWrite
