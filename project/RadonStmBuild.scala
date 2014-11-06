@@ -4,20 +4,37 @@ import Keys._
 object RadonStmBuild extends Build {
 
     /* Dependencies */
-    val junit = "junit" % "junit" % "4.4" % "test"
-    val specs2 = "org.specs2" %% "specs2" % "2.3.13" % "test"
-    val scalaActors = "org.scala-lang" % "scala-actors" % "2.11.2" % "test"
+    val junit = "junit" % "junit" % "4.11" % "test"
+    val specs2 = "org.specs2" %% "specs2" % "2.4.9" % "test"
+    def scalaActors(version: String) = "org.scala-lang" % "scala-actors" % version % "test"
+
+    val customResolvers = Seq(
+        "Maven" at "http://repo1.maven.org/maven2/",
+        "Typesafe" at "http://repo.typesafe.com/typesafe/releases",
+        "Local Maven Repository" at "" + Path.userHome.asFile.toURI.toURL + "/.m2/repository",
+        "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases",
+        "fwbrasil.net" at "http://fwbrasil.net/maven/",
+        "spray" at "http://repo.spray.io/",
+        "Sonatype OSS Releases" at "http://oss.sonatype.org/content/repositories/releases/",
+        "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+        "Alfesco" at "https://maven.alfresco.com/nexus/content/groups/public/"
+    )
 
     lazy val radonStm =
         Project(
             id = "radon-stm",
             base = file("."),
             settings = Defaults.defaultSettings ++ Seq(
-                libraryDependencies ++=
-                    Seq(junit, specs2, scalaActors),
-                javacOptions ++= Seq("-source", "1.5", "-target", "1.5"),
-                // publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))), 
+                crossScalaVersions := Seq("2.10.4","2.11.4"),
+                scalaVersion := "2.11.4",
+                version := "1.7.1",
+                //libraryDependencies ++= Seq(junit, specs2, scalaActors),
+                libraryDependencies <++= (scalaVersion) { v: String => Seq(junit, specs2, scalaActors(v)) },
+                javacOptions ++= Seq("-source", "1.7", "-target", "1.7"),
+                resolvers ++= customResolvers,
+                publishTo := Some(Resolver.file("file",  file(Path.userHome.absolutePath+"/.m2/repository"))), 
                 // publishTo := Option(Resolver.ssh("fwbrasil.net repo", "fwbrasil.net", 8080) as ("maven") withPermissions ("0644")),
+                /*
                 publishTo <<= version { v: String =>
                     val nexus = "https://oss.sonatype.org/"
                     if (v.trim.endsWith("SNAPSHOT"))
@@ -25,6 +42,7 @@ object RadonStmBuild extends Build {
                     else
                         Some("releases" at nexus + "service/local/staging/deploy/maven2")
                 },
+                // */
                 publishMavenStyle := true,
                 publishArtifact in Test := false,
                 pomIncludeRepository := { x => false },
@@ -48,8 +66,6 @@ object RadonStmBuild extends Build {
                             <url>http://fwbrasil.net</url>
                         </developer>
                     </developers>),
-                organization := "net.fwbrasil",
-                scalaVersion := "2.11.2",
-                version := "1.7"))
+                organization := "net.fwbrasil"))
 
 }
